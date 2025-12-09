@@ -15,8 +15,8 @@ Scope { // Scope
     property bool pinned: Config.options?.osk.pinnedOnStartup ?? false
 
     component OskControlButton: GroupButton { // Pin button
-        baseWidth: 40
-        baseHeight: 40
+        baseWidth: 60
+        baseHeight: 60
         clickedWidth: baseWidth
         clickedHeight: baseHeight + 10
         buttonRadius: Appearance.rounding.normal
@@ -98,7 +98,7 @@ Scope { // Scope
                             contentItem: MaterialSymbol {
                                 text: "keep"
                                 horizontalAlignment: Text.AlignHCenter
-                                iconSize: Appearance.font.pixelSize.larger
+                                iconSize: Appearance.font.pixelSize.huge
                                 color: root.pinned ? Appearance.m3colors.m3onPrimary : Appearance.colors.colOnLayer0
                             }
                         }
@@ -109,7 +109,7 @@ Scope { // Scope
                             contentItem: MaterialSymbol {
                                 horizontalAlignment: Text.AlignHCenter
                                 text: "keyboard_hide"
-                                iconSize: Appearance.font.pixelSize.larger
+                                iconSize: Appearance.font.pixelSize.huge
                             }
                         }
                     }
