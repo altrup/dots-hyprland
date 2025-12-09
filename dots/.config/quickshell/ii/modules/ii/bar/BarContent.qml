@@ -173,7 +173,7 @@ Item { // Bar content region
                 }
 
                 UtilButtons {
-                    visible: (Config.options.bar.verbose && root.useShortenedForm === 0)
+                    shorten: !(Config.options.bar.verbose && root.useShortenedForm === 0)
                     Layout.alignment: Qt.AlignVCenter
                 }
 
