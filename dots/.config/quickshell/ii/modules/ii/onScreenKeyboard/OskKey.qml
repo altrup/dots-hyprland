@@ -15,8 +15,8 @@ RippleButton {
     property bool isShift: Ydotool.shiftKeys.includes(keycode)
     property bool isBackspace: (key.toLowerCase() == "backspace")
     property bool isEnter: (key.toLowerCase() == "enter" || key.toLowerCase() == "return")
-    property real baseWidth: 70
-    property real baseHeight: 70
+    property real baseWidth: 45
+    property real baseHeight: 45
     property var widthMultiplier: ({
         "normal": 1,
         "fn": 1,
