@@ -55,7 +55,6 @@ Scope { // Scope
                 GlobalStates.oskOpen = false
             }
             exclusiveZone: root.pinned ? implicitHeight - Appearance.sizes.hyprlandGapsOut : 0
-            implicitWidth: oskBackground.width + Appearance.sizes.elevationMargin * 2
             implicitHeight: oskBackground.height + Appearance.sizes.elevationMargin * 2
             WlrLayershell.namespace: "quickshell:osk"
             WlrLayershell.layer: WlrLayer.Overlay
@@ -74,12 +73,27 @@ Scope { // Scope
             }
             Rectangle {
                 id: oskBackground
-                anchors.centerIn: parent
+                // anchors.centerIn: parent
+                property real maxWidth: 1200
+                property real aspectRatio: 0.35
+                property real padding: 10
+                property real margin: {
+                    const defaultMargin = 20
+                    if ((oskRoot.width - 2 * defaultMargin) > maxWidth) {
+                        return (oskRoot.width - maxWidth) / 2
+                    }
+                    return defaultMargin
+                }
+                anchors {
+                    left: parent.left
+                    right: parent.right
+                    
+                    leftMargin: margin
+                    rightMargin: margin
+                }
                 color: Appearance.colors.colLayer0
                 radius: Appearance.rounding.windowRounding
-                property real padding: 10
-                implicitWidth: oskRowLayout.implicitWidth + padding * 2
-                implicitHeight: oskRowLayout.implicitHeight + padding * 2
+                implicitHeight: width * aspectRatio + padding * 2
 
                 Keys.onPressed: (event) => { // Esc to close
                     if (event.key === Qt.Key_Escape) {
@@ -89,7 +103,18 @@ Scope { // Scope
 
                 RowLayout {
                     id: oskRowLayout
-                    anchors.centerIn: parent
+                    property real margin: 10
+                    anchors {
+                        left: parent.left
+                        right: parent.right
+                        top: parent.top
+                        bottom: parent.bottom
+
+                        leftMargin: parent.padding
+                        rightMargin: parent.padding
+                        topMargin: parent.padding
+                        bottomMargin: parent.padding
+                    }
                     spacing: 5
                     VerticalButtonGroup {
                         OskControlButton { // Pin button
@@ -123,6 +148,7 @@ Scope { // Scope
                     OskContent {
                         id: oskContent
                         Layout.fillWidth: true
+                        Layout.fillHeight: true
                     }
                 }
             }
