@@ -10,8 +10,12 @@ import Quickshell.Services.UPower
 
 Item {
     id: root
+    property bool shorten: false
     property bool borderless: Config.options.bar.borderless
-    implicitWidth: rowLayout.implicitWidth + rowLayout.spacing * 2
+    implicitWidth: {
+        if (rowLayout.implicitWidth === 0) return 0;
+        return rowLayout.implicitWidth + rowLayout.spacing * 2
+    }
     implicitHeight: rowLayout.implicitHeight
 
     RowLayout {
@@ -22,7 +26,7 @@ Item {
 
         Loader {
             active: Config.options.bar.utilButtons.showScreenSnip
-            visible: Config.options.bar.utilButtons.showScreenSnip
+            visible: Config.options.bar.utilButtons.showScreenSnip && (!root.shorten || Config.options.bar.utilButtons.alwaysShowScreenSnip)
             sourceComponent: CircleUtilButton {
                 Layout.alignment: Qt.AlignVCenter
                 onClicked: Quickshell.execDetached(["qs", "-p", Quickshell.shellPath(""), "ipc", "call", "region", "screenshot"]);
@@ -38,7 +42,7 @@ Item {
 
         Loader {
             active: Config.options.bar.utilButtons.showScreenRecord
-            visible: Config.options.bar.utilButtons.showScreenRecord
+            visible: Config.options.bar.utilButtons.showScreenRecord && (!root.shorten || Config.options.bar.utilButtons.alwaysShowScreenRecord)
             sourceComponent: CircleUtilButton {
                 Layout.alignment: Qt.AlignVCenter
                 onClicked: Quickshell.execDetached([Directories.recordScriptPath])
@@ -54,7 +58,7 @@ Item {
 
         Loader {
             active: Config.options.bar.utilButtons.showColorPicker
-            visible: Config.options.bar.utilButtons.showColorPicker
+            visible: Config.options.bar.utilButtons.showColorPicker && (!root.shorten || Config.options.bar.utilButtons.alwaysShowColorPicker)
             sourceComponent: CircleUtilButton {
                 Layout.alignment: Qt.AlignVCenter
                 onClicked: Quickshell.execDetached(["hyprpicker", "-a"])
@@ -70,7 +74,7 @@ Item {
 
         Loader {
             active: Config.options.bar.utilButtons.showKeyboardToggle
-            visible: Config.options.bar.utilButtons.showKeyboardToggle
+            visible: Config.options.bar.utilButtons.showKeyboardToggle && (!root.shorten || Config.options.bar.utilButtons.alwaysShowKeyboardToggle)
             sourceComponent: CircleUtilButton {
                 Layout.alignment: Qt.AlignVCenter
                 onClicked: GlobalStates.oskOpen = !GlobalStates.oskOpen
@@ -86,7 +90,7 @@ Item {
 
         Loader {
             active: Config.options.bar.utilButtons.showMicToggle
-            visible: Config.options.bar.utilButtons.showMicToggle
+            visible: Config.options.bar.utilButtons.showMicToggle && (!root.shorten || Config.options.bar.utilButtons.alwaysShowMicToggle)
             sourceComponent: CircleUtilButton {
                 Layout.alignment: Qt.AlignVCenter
                 onClicked: Quickshell.execDetached(["wpctl", "set-mute", "@DEFAULT_SOURCE@", "toggle"])
@@ -102,7 +106,7 @@ Item {
 
         Loader {
             active: Config.options.bar.utilButtons.showDarkModeToggle
-            visible: Config.options.bar.utilButtons.showDarkModeToggle
+            visible: Config.options.bar.utilButtons.showDarkModeToggle && (!root.shorten || Config.options.bar.utilButtons.alwaysShowDarkModeToggle)
             sourceComponent: CircleUtilButton {
                 Layout.alignment: Qt.AlignVCenter
                 onClicked: event => {
@@ -124,7 +128,7 @@ Item {
 
         Loader {
             active: Config.options.bar.utilButtons.showPerformanceProfileToggle
-            visible: Config.options.bar.utilButtons.showPerformanceProfileToggle
+            visible: Config.options.bar.utilButtons.showPerformanceProfileToggle && (!root.shorten || Config.options.bar.utilButtons.alwaysShowPerformanceProfileToggle)
             sourceComponent: CircleUtilButton {
                 Layout.alignment: Qt.AlignVCenter
                 onClicked: event => {

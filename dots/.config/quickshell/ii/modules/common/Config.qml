@@ -243,12 +243,19 @@ Singleton {
                 property list<string> screenList: [] // List of names, like "eDP-1", find out with 'hyprctl monitors' command
                 property JsonObject utilButtons: JsonObject {
                     property bool showScreenSnip: true
+                    property bool alwaysShowScreenSnip: false
                     property bool showColorPicker: false
+                    property bool alwaysShowColorPicker: false
                     property bool showMicToggle: false
+                    property bool alwaysShowMicToggle: false
                     property bool showKeyboardToggle: true
+                    property bool alwaysShowKeyboardToggle: true
                     property bool showDarkModeToggle: true
+                    property bool alwaysShowDarkModeToggle: false
                     property bool showPerformanceProfileToggle: false
+                    property bool alwaysShowPerformanceProfileToggle: false
                     property bool showScreenRecord: false
+                    property bool alwaysShowScreenRecord: false
                 }
                 property JsonObject workspaces: JsonObject {
                     property bool monochromeIcons: true
