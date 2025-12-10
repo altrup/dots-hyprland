@@ -10,12 +10,13 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
 
-Loader {
-    id: oskLoader
+Rectangle { // Window
+    id: oskRoot
+    property bool open: GlobalStates.oskOpen
     property bool pinned: Config.options?.osk.pinnedOnStartup ?? false
-    active: GlobalStates.oskOpen
-    onActiveChanged: {     
-        if (!oskLoader.active) {
+
+    onOpenChanged: {
+        if (!open) {
             Ydotool.releaseAllKeys();
         }
     }
@@ -24,29 +25,39 @@ Loader {
         horizontalCenter: parent.horizontalCenter
         bottom: parent.bottom
     }
+
+    function hide() {
+        open = false
+    }
+    implicitHeight: oskContent.height + Appearance.sizes.elevationMargin * 2
+    color: "transparent"
+
+    state: open ? "open" : "closed" 
     
-    sourceComponent: Rectangle { // Window
-        id: oskRoot
-        visible: oskLoader.active
-
-        function hide() {
-            GlobalStates.oskOpen = false
+    states: [
+        State {
+            name: "closed"
+            PropertyChanges { target: oskRoot; anchors.bottomMargin: -oskRoot.implicitHeight; } 
+        },
+        State {
+            name: "open"
+            PropertyChanges { target: oskRoot; anchors.bottomMargin: 0; }
         }
-        implicitHeight: oskContent.height + Appearance.sizes.elevationMargin * 2
-        color: "transparent"
+    ]
+    Behavior on anchors.bottomMargin {
+        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+    }
 
-        // Content
-        StyledRectangularShadow {
-            target: oskContent
-        }
-        OskContent {
-            id: oskContent
-            pinned: oskLoader.pinned
-            onHideRequested: oskRoot.hide()
-            onPinRequested: (pinned) => {
-                oskLoader.pinned = pinned;
-            }
+    // Content
+    StyledRectangularShadow {
+        target: oskContent
+    }
+    OskContent {
+        id: oskContent
+        pinned: oskRoot.pinned
+        onHideRequested: oskRoot.hide()
+        onPinRequested: (pinned) => {
+            oskRoot.pinned = pinned;
         }
     }
 }
-

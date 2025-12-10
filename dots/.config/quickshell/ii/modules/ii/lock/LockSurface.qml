@@ -109,8 +109,8 @@ MouseArea {
         id: mainIsland
         anchors {
             horizontalCenter: parent.horizontalCenter
-            bottom: olsk.active ? olsk.top : parent.bottom
-            bottomMargin: olsk.active ? 0 : 20
+            bottom: olsk.top
+            bottomMargin: olsk.open ? 0 : 20
         }
         Behavior on anchors.bottomMargin {
             animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
@@ -386,7 +386,7 @@ MouseArea {
             color: pair.color
         }
     }
-
+    
     OnScreenKeyboard.OnLockScreenKeyboard {
         id: olsk
     }
