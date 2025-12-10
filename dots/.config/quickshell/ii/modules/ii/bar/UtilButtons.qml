@@ -10,18 +10,26 @@ import Quickshell.Services.UPower
 
 Item {
     id: root
+    property bool vertical: false
     property bool shorten: false
     property bool borderless: Config.options.bar.borderless
     implicitWidth: {
-        if (rowLayout.implicitWidth === 0) return 0;
-        return rowLayout.implicitWidth + rowLayout.spacing * 2
+        if (vertical) return gridLayout.implicitWidth;
+        if (gridLayout.implicitWidth === 0) return 0;
+        return gridLayout.implicitWidth + gridLayout.columnSpacing * 2
     }
-    implicitHeight: rowLayout.implicitHeight
+    implicitHeight: {
+        if (!vertical) return gridLayout.implicitHeight;
+        if (gridLayout.implicitHeight === 0) return 0;
+        return gridLayout.implicitHeight + gridLayout.rowSpacing * 0
+    }
 
-    RowLayout {
-        id: rowLayout
+    GridLayout {
+        id: gridLayout
+        columns: root.vertical ? 1 : -1
 
-        spacing: 4
+        rowSpacing: 4
+        columnSpacing: 4
         anchors.centerIn: parent
 
         Loader {
