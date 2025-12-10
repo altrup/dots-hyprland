@@ -20,8 +20,6 @@ MouseArea {
     property bool showInputField: active || context.currentText.length > 0
     readonly property bool requirePasswordToPower: Config.options.lock.security.requirePasswordToPower
 
-    OnScreenKeyboard.OnLockScreenKeyboard { }
-
     // Force focus on entry
     function forceFieldFocus() {
         passwordBox.forceActiveFocus();
@@ -111,8 +109,8 @@ MouseArea {
         id: mainIsland
         anchors {
             horizontalCenter: parent.horizontalCenter
-            bottom: parent.bottom
-            bottomMargin: 20
+            bottom: olsk.active ? olsk.top : parent.bottom
+            bottomMargin: olsk.active ? 0 : 20
         }
         Behavior on anchors.bottomMargin {
             animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
@@ -387,5 +385,9 @@ MouseArea {
             text: pair.text
             color: pair.color
         }
+    }
+
+    OnScreenKeyboard.OnLockScreenKeyboard {
+        id: olsk
     }
 }

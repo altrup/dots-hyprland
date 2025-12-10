@@ -13,30 +13,27 @@ import Quickshell.Hyprland
 Loader {
     id: oskLoader
     property bool pinned: Config.options?.osk.pinnedOnStartup ?? false
-    anchors.fill : parent
     active: GlobalStates.oskOpen
     onActiveChanged: {     
         if (!oskLoader.active) {
             Ydotool.releaseAllKeys();
         }
     }
+
+    anchors {
+        horizontalCenter: parent.horizontalCenter
+        bottom: parent.bottom
+    }
     
     sourceComponent: Rectangle { // Window
         id: oskRoot
         visible: oskLoader.active
 
-        anchors {
-            bottom: parent.bottom
-            left: parent.left
-            right: parent.right
-        }
-
         function hide() {
             GlobalStates.oskOpen = false
         }
-        // exclusiveZone: oskLoader.pinned ? implicitHeight - Appearance.sizes.hyprlandGapsOut : 0
         implicitHeight: oskContent.height + Appearance.sizes.elevationMargin * 2
-        color: "green"
+        color: "transparent"
 
         // Content
         StyledRectangularShadow {
