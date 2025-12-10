@@ -27,7 +27,7 @@ Rectangle { // Window
     }
 
     function hide() {
-        open = false
+        GlobalStates.oskOpen = false
     }
     implicitHeight: oskContent.height + Appearance.sizes.elevationMargin * 2
     color: "transparent"
