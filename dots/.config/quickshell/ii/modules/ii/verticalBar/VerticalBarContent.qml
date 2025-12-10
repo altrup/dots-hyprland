@@ -15,6 +15,7 @@ Item { // Bar content region
 
     property var screen: root.QsWindow.window?.screen
     property var brightnessMonitor: Brightness.getMonitorForScreen(screen)
+    property real useShortenedForm: (Appearance.sizes.barHellaShortenScreenWidthThreshold >= screen?.height) ? 2 : (Appearance.sizes.barShortenScreenWidthThreshold >= screen?.height) ? 1 : 0
 
     component HorizontalBarSeparator: Rectangle {
         Layout.leftMargin: Appearance.sizes.baseBarHeight / 3
@@ -143,6 +144,19 @@ Item { // Bar content region
             HorizontalBarSeparator {}
 
             VerticalDateWidget {
+                Layout.fillWidth: true
+                Layout.fillHeight: false
+            }
+
+            HorizontalBarSeparator {
+                visible: utilButtons.numActive > 0
+            }
+
+            Bar.UtilButtons {
+                id: utilButtons
+                visible: numActive > 0
+                vertical: true
+                shorten: !(Config.options.bar.verbose && root.useShortenedForm === 0)
                 Layout.fillWidth: true
                 Layout.fillHeight: false
             }
