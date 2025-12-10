@@ -13,14 +13,15 @@ Item {
     property bool vertical: false
     property bool shorten: false
     property bool borderless: Config.options.bar.borderless
+    property int numActive: gridLayout.children.filter(e => e.active).length
     implicitWidth: {
         if (vertical) return gridLayout.implicitWidth;
-        if (gridLayout.implicitWidth === 0) return 0;
+        if (numActive === 0) return 0;
         return gridLayout.implicitWidth + gridLayout.columnSpacing * 2
     }
     implicitHeight: {
         if (!vertical) return gridLayout.implicitHeight;
-        if (gridLayout.implicitHeight === 0) return 0;
+        if (numActive === 0) return 0;
         return gridLayout.implicitHeight + gridLayout.rowSpacing * 0
     }
 
@@ -33,7 +34,7 @@ Item {
         anchors.centerIn: parent
 
         Loader {
-            active: Config.options.bar.utilButtons.showScreenSnip
+            active: Config.options.bar.utilButtons.showScreenSnip && (!root.shorten || Config.options.bar.utilButtons.alwaysShowScreenSnip)
             visible: Config.options.bar.utilButtons.showScreenSnip && (!root.shorten || Config.options.bar.utilButtons.alwaysShowScreenSnip)
             sourceComponent: CircleUtilButton {
                 Layout.alignment: Qt.AlignVCenter
@@ -49,7 +50,7 @@ Item {
         }
 
         Loader {
-            active: Config.options.bar.utilButtons.showScreenRecord
+            active: Config.options.bar.utilButtons.showScreenRecord && (!root.shorten || Config.options.bar.utilButtons.alwaysShowScreenRecord)
             visible: Config.options.bar.utilButtons.showScreenRecord && (!root.shorten || Config.options.bar.utilButtons.alwaysShowScreenRecord)
             sourceComponent: CircleUtilButton {
                 Layout.alignment: Qt.AlignVCenter
@@ -65,7 +66,7 @@ Item {
         }
 
         Loader {
-            active: Config.options.bar.utilButtons.showColorPicker
+            active: Config.options.bar.utilButtons.showColorPicker && (!root.shorten || Config.options.bar.utilButtons.alwaysShowColorPicker)
             visible: Config.options.bar.utilButtons.showColorPicker && (!root.shorten || Config.options.bar.utilButtons.alwaysShowColorPicker)
             sourceComponent: CircleUtilButton {
                 Layout.alignment: Qt.AlignVCenter
@@ -81,7 +82,7 @@ Item {
         }
 
         Loader {
-            active: Config.options.bar.utilButtons.showKeyboardToggle
+            active: Config.options.bar.utilButtons.showKeyboardToggle && (!root.shorten || Config.options.bar.utilButtons.alwaysShowKeyboardToggle)
             visible: Config.options.bar.utilButtons.showKeyboardToggle && (!root.shorten || Config.options.bar.utilButtons.alwaysShowKeyboardToggle)
             sourceComponent: CircleUtilButton {
                 Layout.alignment: Qt.AlignVCenter
@@ -97,7 +98,7 @@ Item {
         }
 
         Loader {
-            active: Config.options.bar.utilButtons.showMicToggle
+            active: Config.options.bar.utilButtons.showMicToggle && (!root.shorten || Config.options.bar.utilButtons.alwaysShowMicToggle)
             visible: Config.options.bar.utilButtons.showMicToggle && (!root.shorten || Config.options.bar.utilButtons.alwaysShowMicToggle)
             sourceComponent: CircleUtilButton {
                 Layout.alignment: Qt.AlignVCenter
@@ -113,7 +114,7 @@ Item {
         }
 
         Loader {
-            active: Config.options.bar.utilButtons.showDarkModeToggle
+            active: Config.options.bar.utilButtons.showDarkModeToggle && (!root.shorten || Config.options.bar.utilButtons.alwaysShowDarkModeToggle)
             visible: Config.options.bar.utilButtons.showDarkModeToggle && (!root.shorten || Config.options.bar.utilButtons.alwaysShowDarkModeToggle)
             sourceComponent: CircleUtilButton {
                 Layout.alignment: Qt.AlignVCenter
@@ -135,7 +136,7 @@ Item {
         }
 
         Loader {
-            active: Config.options.bar.utilButtons.showPerformanceProfileToggle
+            active: Config.options.bar.utilButtons.showPerformanceProfileToggle && (!root.shorten || Config.options.bar.utilButtons.alwaysShowPerformanceProfileToggle)
             visible: Config.options.bar.utilButtons.showPerformanceProfileToggle && (!root.shorten || Config.options.bar.utilButtons.alwaysShowPerformanceProfileToggle)
             sourceComponent: CircleUtilButton {
                 Layout.alignment: Qt.AlignVCenter

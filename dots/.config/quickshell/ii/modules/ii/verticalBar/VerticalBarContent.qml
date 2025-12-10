@@ -148,9 +148,13 @@ Item { // Bar content region
                 Layout.fillHeight: false
             }
 
-            HorizontalBarSeparator {}
+            HorizontalBarSeparator {
+                visible: utilButtons.numActive > 0
+            }
 
             Bar.UtilButtons {
+                id: utilButtons
+                visible: numActive > 0
                 vertical: true
                 shorten: !(Config.options.bar.verbose && root.useShortenedForm === 0)
                 Layout.fillWidth: true
