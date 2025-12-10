@@ -9,6 +9,7 @@ import qs.modules.common.widgets
 import qs.modules.common.functions
 import qs.modules.common.panels.lock
 import qs.modules.ii.bar as Bar
+import qs.modules.ii.onScreenKeyboard as OnScreenKeyboard
 import Quickshell
 import Quickshell.Services.SystemTray
 
@@ -18,6 +19,8 @@ MouseArea {
     property bool active: false
     property bool showInputField: active || context.currentText.length > 0
     readonly property bool requirePasswordToPower: Config.options.lock.security.requirePasswordToPower
+
+    OnScreenKeyboard.OnLockScreenKeyboard { }
 
     // Force focus on entry
     function forceFieldFocus() {
@@ -65,10 +68,17 @@ MouseArea {
         root.context.resetClearTimer();
         if (event.key === Qt.Key_Control) {
             root.ctrlHeld = true;
-        }
-        if (event.key === Qt.Key_Escape) { // Esc to clear
+        } else if (event.key === Qt.Key_Escape) { // Esc to clear
             root.context.currentText = "";
-        } 
+        } else if (event.text && event.text.length === 1 && event.key !== Qt.Key_Enter && event.key !== Qt.Key_Return && event.key !== Qt.Key_Delete && event.text.charCodeAt(0) >= 0x20) // ignore control chars like Backspace, Tab, etc.
+        {
+            if (!passwordBox.activeFocus) {
+                // Insert the character at the cursor position
+                passwordBox.text = passwordBox.text.slice(0, passwordBox.cursorPosition) + event.text + passwordBox.text.slice(passwordBox.cursorPosition);
+                passwordBox.cursorPosition += 1;
+                event.accepted = true;
+            }
+        }
         forceFieldFocus();
     }
     Keys.onReleased: event => {
@@ -300,6 +310,12 @@ MouseArea {
         scale: root.toolbarScale
         opacity: root.toolbarOpacity
 
+        IconToolbarButton {
+            id: oskButton
+            onClicked: GlobalStates.oskOpen = !GlobalStates.oskOpen
+            text: "keyboard"
+        }
+        
         IconAndTextPair {
             visible: Battery.available
             icon: Battery.isCharging ? "bolt" : "battery_android_full"
