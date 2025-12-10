@@ -25,6 +25,10 @@ Scope { // Scope
 
         Layout.fillWidth: true
         Layout.preferredWidth: baseWidth
+
+        function calculateIconSize() {
+            return height >= 50 ? Appearance.font.pixelSize.huge : Appearance.font.pixelSize.larger;
+        }
     }
 
     Loader {
@@ -79,7 +83,7 @@ Scope { // Scope
             Rectangle {
                 id: oskBackground
                 anchors.centerIn: parent
-                property real maxWidth: {
+                property int maxWidth: {
                     return Math.max(Screen.width, Screen.height) * Config.options.osk.maxWidthFraction
                 }
                 property real aspectRatio: 0.35
@@ -100,17 +104,10 @@ Scope { // Scope
                 RowLayout {
                     id: oskRowLayout
                     anchors {
-                        left: parent.left
-                        right: parent.right
-                        top: parent.top
-                        bottom: parent.bottom
-
-                        leftMargin: parent.padding
-                        rightMargin: parent.padding
-                        topMargin: parent.padding
-                        bottomMargin: parent.padding
+                        fill: parent
+                        margins: oskBackground.padding
                     }
-                    spacing: parent.padding
+                    spacing: oskBackground.padding
                     VerticalButtonGroup {
                         Layout.fillWidth: true
                         OskControlButton { // Pin button
@@ -119,8 +116,11 @@ Scope { // Scope
                             contentItem: MaterialSymbol {
                                 text: "keep"
                                 horizontalAlignment: Text.AlignHCenter
-                                iconSize: Appearance.font.pixelSize.huge
+                                iconSize: parent.calculateIconSize()
                                 color: root.pinned ? Appearance.m3colors.m3onPrimary : Appearance.colors.colOnLayer0
+                            }
+                            onHeightChanged: {
+                                contentItem.iconSize = calculateIconSize()
                             }
                         }
                         OskControlButton {
@@ -130,7 +130,10 @@ Scope { // Scope
                             contentItem: MaterialSymbol {
                                 horizontalAlignment: Text.AlignHCenter
                                 text: "keyboard_hide"
-                                iconSize: Appearance.font.pixelSize.huge
+                                iconSize: parent.calculateIconSize()
+                            }
+                            onHeightChanged: {
+                                contentItem.iconSize = calculateIconSize()
                             }
                         }
                     }
