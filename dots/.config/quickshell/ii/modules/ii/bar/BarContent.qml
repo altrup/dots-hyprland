@@ -331,7 +331,7 @@ Item { // Bar content region
             // Weather
             Loader {
                 Layout.leftMargin: 4
-                active: Config.options.bar.weather.enable
+                active: Config.options.bar.weather.enable && (Config.options.bar.weather.alwaysShow || root.useShortenedForm === 0)
 
                 sourceComponent: BarGroup {
                     WeatherBar {}
