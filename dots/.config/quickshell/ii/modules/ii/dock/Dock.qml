@@ -125,10 +125,7 @@ Scope { // Scope
                             }
                             DockSeparator {}
                             DockButton {
-                                anchors {
-                                    top: parent.top
-                                    bottom: parent.bottom
-                                }
+                                Layout.fillHeight: true
                                 onClicked: GlobalStates.overviewOpen = !GlobalStates.overviewOpen
                                 topInset: dockRow.padding
                                 bottomInset: dockRow.padding
