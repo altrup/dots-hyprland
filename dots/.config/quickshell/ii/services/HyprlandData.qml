@@ -84,11 +84,11 @@ Singleton {
     // null means nothing is called, undefined means everything is
     property var eventNameToUpdateFunction: ({
         "activewindow": null,
-        "activewindowv2": updateWindowList,
+        "activewindowv2": updateWindows,
         "windowtitle": null,
-        "windowtitlev2": updateWindowList,
+        "windowtitlev2": updateWindows,
         "activespecial": null,
-        "activespecialv2": updateWindowList, // special workspaces don't affect which "normal" ones are active
+        "activespecialv2": updateWindows, // special workspaces don't affect which "normal" ones are active
 
         "openlayer": updateLayers,
         "closelayer": updateLayers,
