@@ -59,7 +59,6 @@ Singleton {
     }
 
     function updateWorkspaces() {
-        getMonitors.running = true; // monitors also includes the active workspace
         getWorkspaces.running = true;
         getActiveWorkspace.running = true;
     }
@@ -80,33 +79,34 @@ Singleton {
         }, null);
     }
 
-    // null means nothing is called, undefined means everything is
-    property var eventNameToUpdateFunction: ({
-        "activewindow": null,
-        "activewindowv2": updateWindowList,
-        "windowtitle": null,
-        "windowtitlev2": updateWindowList,
-        "activespecial": null,
-        "activespecialv2": updateWindowList, // special workspaces don't affect which "normal" ones are active
+    property var eventNameToUpdateFunctions: ({
+        "activewindow": [],
+        "activewindowv2": [updateWindowList],
+        "windowtitle": [],
+        "windowtitlev2": [updateWindowList],
+        "activespecial": [],
+        "activespecialv2": [updateWindowList], // special workspaces don't affect which "normal" ones are active
+        "openwindow": [updateWindowList],
+        "closewindow": [updateWindowList],
 
-        "openlayer": updateLayers,
-        "closelayer": updateLayers,
+        "openlayer": [updateLayers],
+        "closelayer": [updateLayers],
 
-        "focusedmonv": null,
-        "focusedmonv2": updateMonitors,
-        "monitoradded": null,
-        "monitoraddedv2": updateMonitors,
-        "monitorremoved": null,
-        "monitorremovedv2": updateMonitors,
+        "focusedmonv": [],
+        "focusedmonv2": [updateMonitors],
+        "monitoradded": [],
+        "monitoraddedv2": [updateMonitors],
+        "monitorremoved": [],
+        "monitorremovedv2": [updateMonitors],
 
-        "workspace": null,
-        "workspacev2": updateWorkspaces,
-        "moveworkspace": null,
-        "moveworkspacev2": updateWorkspaces,
-        "createworkspace": null,
-        "createworkspacev2": updateWorkspaces,
-        "destroyworkspace": null,
-        "destroyworkspacev2": updateWorkspaces,
+        "workspace": [],
+        "workspacev2": [updateWorkspaces, updateMonitors],
+        "moveworkspace": [],
+        "moveworkspacev2": [updateWorkspaces, updateMonitors],
+        "createworkspace": [],
+        "createworkspacev2": [updateWorkspaces, updateMonitors],
+        "destroyworkspace": [],
+        "destroyworkspacev2": [updateWorkspaces, updateMonitors],
     })
 
     Component.onCompleted: {
@@ -117,10 +117,10 @@ Singleton {
         target: Hyprland
 
         function onRawEvent(event) {
-            const updateFunction = eventNameToUpdateFunction[event.name]
-            if (updateFunction) {
-                updateFunction();
-            } else if (updateFunction === undefined) {
+            const updateFunctions = eventNameToUpdateFunctions[event.name]
+            if (updateFunctions) {
+                updateFunctions.forEach(func => func());
+            } else {
                 console.warn("Unknown hyprland raw event:", event.name);
                 updateAll();
             }
