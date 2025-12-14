@@ -27,7 +27,8 @@ Scope { // Scope
             screen: modelData
             visible: !GlobalStates.screenLocked
 
-            property bool reveal: root.pinned || (Config.options?.dock.hoverToReveal && dockMouseArea.containsMouse) || dockApps.requestDockShow || (!ToplevelManager.activeToplevel?.activated)
+            property var currentWorkspaceID: HyprlandData.monitors[HyprlandData.activeWorkspace?.monitorID]?.specialWorkspace.id || HyprlandData.monitors[HyprlandData.activeWorkspace?.monitorID]?.activeWorkspace.id
+            property bool reveal: root.pinned || (Config.options?.dock.hoverToReveal && dockMouseArea.containsMouse) || dockApps.requestDockShow || !(ToplevelManager.activeToplevel?.activated && HyprlandData.activeWindow?.workspace?.id === currentWorkspaceID)
 
             anchors {
                 bottom: true
