@@ -61,6 +61,7 @@ Singleton {
     }
 
     function updateWorkspaces() {
+        getMonitors.running = true; // monitors also includes the active workspace
         getWorkspaces.running = true;
         getActiveWorkspace.running = true;
     }
@@ -110,6 +111,11 @@ Singleton {
         "destroyworkspacev2": updateWorkspaces,
     })
 
+    property var _: {
+        console.warn("curr workspace:", HyprlandData.monitors[HyprlandData.activeWorkspace?.monitorID]?.specialWorkspace.id || HyprlandData.monitors[HyprlandData.activeWorkspace?.monitorID]?.activeWorkspace.id);
+        console.warn("curr active window workspace", HyprlandData.activeWindow?.workspace?.id);
+    }
+
     Component.onCompleted: {
         updateAll();
     }
@@ -118,6 +124,7 @@ Singleton {
         target: Hyprland
 
         function onRawEvent(event) {
+            console.warn("Hyprland raw event:", event.name);
             const updateFunction = eventNameToUpdateFunction[event.name]
             if (updateFunction) {
                 updateFunction();
