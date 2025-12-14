@@ -79,36 +79,6 @@ Singleton {
         }, null);
     }
 
-    property var eventNameToUpdateFunctions: ({
-        "activewindow": [],
-        "activewindowv2": [updateWindowList],
-        "windowtitle": [],
-        "windowtitlev2": [updateWindowList],
-        "activespecial": [],
-        "activespecialv2": [updateWindowList], // special workspaces don't affect which "normal" ones are active
-        "openwindow": [updateWindowList],
-        "closewindow": [updateWindowList],
-
-        "openlayer": [updateLayers],
-        "closelayer": [updateLayers],
-
-        "focusedmonv": [],
-        "focusedmonv2": [updateMonitors],
-        "monitoradded": [],
-        "monitoraddedv2": [updateMonitors],
-        "monitorremoved": [],
-        "monitorremovedv2": [updateMonitors],
-
-        "workspace": [],
-        "workspacev2": [updateWorkspaces, updateMonitors],
-        "moveworkspace": [],
-        "moveworkspacev2": [updateWorkspaces, updateMonitors],
-        "createworkspace": [],
-        "createworkspacev2": [updateWorkspaces, updateMonitors],
-        "destroyworkspace": [],
-        "destroyworkspacev2": [updateWorkspaces, updateMonitors],
-    })
-
     Component.onCompleted: {
         updateAll();
     }
@@ -117,13 +87,8 @@ Singleton {
         target: Hyprland
 
         function onRawEvent(event) {
-            const updateFunctions = eventNameToUpdateFunctions[event.name]
-            if (updateFunctions) {
-                updateFunctions.forEach(func => func());
-            } else {
-                console.warn("Unknown hyprland raw event:", event.name);
-                updateAll();
-            }
+            // console.log("Hyprland raw event:", event.name);
+            updateAll()
         }
     }
 
