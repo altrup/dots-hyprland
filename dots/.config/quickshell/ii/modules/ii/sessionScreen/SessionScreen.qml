@@ -57,6 +57,8 @@ Scope {
             implicitHeight: root.focusedScreen?.height ?? 0
 
             component ScreenCorner: RoundCorner {
+                visible: (Config.options.appearance.fakeScreenRounding === 1 || (Config.options.appearance.fakeScreenRounding === 2 && !fullscreen))
+                
                 anchors {
                     top: isTopLeft || isTopRight ? parent.top : undefined
                     left: isBottomLeft || isTopLeft ? parent.left : undefined
