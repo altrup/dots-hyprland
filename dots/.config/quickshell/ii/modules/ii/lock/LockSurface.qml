@@ -377,5 +377,11 @@ MouseArea {
     SessionScreen.SessionScreenContent {
         visible: GlobalStates.sessionOpen
         onHideRequested: GlobalStates.sessionOpen = false
+
+        onVisibleChanged: {
+            if (!visible) {
+                root.context.shouldReFocus();
+            }
+        }
     }
 }
