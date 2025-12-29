@@ -219,10 +219,14 @@ MouseArea {
                 text: {
                     if (root.context.targetAction === LockContext.ActionEnum.Unlock) {
                         return root.ctrlHeld ? "emoji_food_beverage" : "arrow_right_alt";
+                    } else if (root.context.targetAction === LockContext.ActionEnum.Logout) {
+                        return "logout";
                     } else if (root.context.targetAction === LockContext.ActionEnum.Poweroff) {
                         return "power_settings_new";
                     } else if (root.context.targetAction === LockContext.ActionEnum.Reboot) {
                         return "restart_alt";
+                    } else if (root.context.targetAction === LockContext.ActionEnum.RebootToFirmware) {
+                        return "settings_applications";
                     }
                 }
                 color: confirmButton.enabled ? Appearance.colors.colOnPrimary : Appearance.colors.colSubtext
@@ -378,11 +382,20 @@ MouseArea {
 
     SessionScreen.SessionScreenContent {
         visible: GlobalStates.sessionOpen
+        requirePasswordToPower: root.requirePasswordToPower
         onHideRequested: GlobalStates.sessionOpen = false
 
         onVisibleChanged: {
             if (!visible) {
                 root.context.shouldReFocus();
+            }
+        }
+
+        onRequestPower: (action) => {
+            if (root.context.targetAction === action) {
+                root.context.resetTargetAction();
+            } else {
+                root.context.targetAction = action;
             }
         }
     }

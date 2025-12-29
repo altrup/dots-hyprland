@@ -3,6 +3,7 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
+import qs.modules.common.panels.lock
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -14,7 +15,9 @@ import Quickshell.Hyprland
 Rectangle {
     id: root
     property string subtitle: ""
+    property bool requirePasswordToPower: false
     signal hideRequested()
+    signal requestPower(action: var)
 
     anchors.fill: parent
     color: ColorUtils.transparentize(Appearance.m3colors.m3background, Appearance.m3colors.darkmode ? 0.05 : 0.12)
@@ -98,13 +101,18 @@ Rectangle {
             rowSpacing: 15
 
             SessionActionButton {
-                id: sessionLock
+                id: sessionLockOrUnlock
+                property bool isLock: !GlobalStates.screenLocked || !root.requirePasswordToPower 
                 focus: root.visible && enabled
-                enabled: !GlobalStates.screenLocked
-                buttonIcon: "lock"
-                buttonText: Translation.tr("Lock")
+                enabled: !GlobalStates.screenLocked || root.requirePasswordToPower
+                buttonIcon: isLock ? "lock" : "lock_open"
+                buttonText: Translation.tr(isLock ? "Lock" : "Unlock")
                 onClicked: {
-                    Session.lock();
+                    if (isLock) {
+                        Session.lock();
+                    } else {
+                        root.requestPower(LockContext.ActionEnum.Unlock);
+                    }
                     root.hideRequested();
                 }
                 onFocusChanged: {
@@ -116,7 +124,7 @@ Rectangle {
             }
             SessionActionButton {
                 id: sessionSleep
-                focus: root.visible && !sessionLock.enabled
+                focus: root.visible && !sessionLockOrUnlock.enabled
                 buttonIcon: "dark_mode"
                 buttonText: Translation.tr("Sleep")
                 onClicked: {
@@ -127,7 +135,7 @@ Rectangle {
                     if (focus)
                         root.subtitle = buttonText;
                 }
-                KeyNavigation.left: sessionLock
+                KeyNavigation.left: sessionLockOrUnlock
                 KeyNavigation.right: sessionLogout
                 KeyNavigation.down: sessionShutdown
             }
@@ -136,7 +144,11 @@ Rectangle {
                 buttonIcon: "logout"
                 buttonText: Translation.tr("Logout")
                 onClicked: {
-                    Session.logout();
+                    if (!root.requirePasswordToPower) {
+                        Session.logout();
+                    } else {
+                        root.requestPower(LockContext.ActionEnum.Logout);
+                    }
                     root.hideRequested();
                 }
                 onFocusChanged: {
@@ -176,7 +188,7 @@ Rectangle {
                     if (focus)
                         root.subtitle = buttonText;
                 }
-                KeyNavigation.up: sessionLock
+                KeyNavigation.up: sessionLockOrUnlock
                 KeyNavigation.right: sessionShutdown
             }
             SessionActionButton {
@@ -184,7 +196,11 @@ Rectangle {
                 buttonIcon: "power_settings_new"
                 buttonText: Translation.tr("Shutdown")
                 onClicked: {
-                    Session.poweroff();
+                    if (!root.requirePasswordToPower) {
+                        Session.poweroff();
+                    } else {
+                        root.requestPower(LockContext.ActionEnum.Poweroff);
+                    }
                     root.hideRequested();
                 }
                 onFocusChanged: {
@@ -200,7 +216,11 @@ Rectangle {
                 buttonIcon: "restart_alt"
                 buttonText: Translation.tr("Reboot")
                 onClicked: {
-                    Session.reboot();
+                    if (!root.requirePasswordToPower) {
+                        Session.reboot();
+                    } else {
+                        root.requestPower(LockContext.ActionEnum.Reboot);
+                    }
                     root.hideRequested();
                 }
                 onFocusChanged: {
@@ -216,7 +236,11 @@ Rectangle {
                 buttonIcon: "settings_applications"
                 buttonText: Translation.tr("Reboot to firmware settings")
                 onClicked: {
-                    Session.rebootToFirmware();
+                    if (!root.requirePasswordToPower) {
+                        Session.rebootToFirmware();
+                    } else {
+                        root.requestPower(LockContext.ActionEnum.RebootToFirmware);
+                    }
                     root.hideRequested();
                 }
                 onFocusChanged: {
