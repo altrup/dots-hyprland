@@ -22,7 +22,9 @@ MouseArea {
 
     // Force focus on entry
     function forceFieldFocus() {
-        passwordBox.forceActiveFocus();
+        if (!GlobalStates.sessionOpen) {
+            passwordBox.forceActiveFocus();
+        }
     }
     Connections {
         target: context

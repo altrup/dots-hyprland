@@ -99,7 +99,8 @@ Rectangle {
 
             SessionActionButton {
                 id: sessionLock
-                focus: root.visible
+                focus: root.visible && enabled
+                enabled: !GlobalStates.screenLocked
                 buttonIcon: "lock"
                 buttonText: Translation.tr("Lock")
                 onClicked: {
@@ -115,6 +116,7 @@ Rectangle {
             }
             SessionActionButton {
                 id: sessionSleep
+                focus: root.visible && !sessionLock.enabled
                 buttonIcon: "dark_mode"
                 buttonText: Translation.tr("Sleep")
                 onClicked: {
@@ -147,6 +149,7 @@ Rectangle {
             }
             SessionActionButton {
                 id: sessionTaskManager
+                enabled: !GlobalStates.screenLocked
                 buttonIcon: "browse_activity"
                 buttonText: Translation.tr("Task Manager")
                 onClicked: {
