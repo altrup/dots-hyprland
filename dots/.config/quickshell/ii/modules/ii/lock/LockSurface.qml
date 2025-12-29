@@ -9,6 +9,7 @@ import qs.modules.common.widgets
 import qs.modules.common.functions
 import qs.modules.common.panels.lock
 import qs.modules.ii.bar as Bar
+import qs.modules.ii.sessionScreen as SessionScreen
 import Quickshell
 import Quickshell.Services.SystemTray
 
@@ -371,5 +372,10 @@ MouseArea {
             text: pair.text
             color: pair.color
         }
+    }
+
+    SessionScreen.SessionScreenContent {
+        visible: GlobalStates.sessionOpen
+        onHideRequested: GlobalStates.sessionOpen = false
     }
 }
