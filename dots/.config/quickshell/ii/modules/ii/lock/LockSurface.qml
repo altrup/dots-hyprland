@@ -315,18 +315,38 @@ MouseArea {
         }
 
         IconToolbarButton {
+            visible: Config.options.lock.useSessionScreen
+
+            id: sessionButton
+            text: "power_settings_new"
+            onClicked: {
+                GlobalStates.sessionOpen = true;
+            }
+            StyledToolTip {
+                text: Translation.tr("Session")
+                extraVisibleCondition: !GlobalStates.sessionOpen
+            }
+        }
+        
+        IconToolbarButton {
+            visible: !Config.options.lock.useSessionScreen
+
             id: sleepButton
             onClicked: Session.suspend()
             text: "dark_mode"
         }
 
         PasswordGuardedIconToolbarButton {
+            visible: !Config.options.lock.useSessionScreen
+
             id: powerButton
             text: "power_settings_new"
             targetAction: LockContext.ActionEnum.Poweroff
         }
 
         PasswordGuardedIconToolbarButton {
+            visible: !Config.options.lock.useSessionScreen
+
             id: rebootButton
             text: "restart_alt"
             targetAction: LockContext.ActionEnum.Reboot
