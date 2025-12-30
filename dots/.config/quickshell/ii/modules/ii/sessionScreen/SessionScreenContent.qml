@@ -68,6 +68,7 @@ Rectangle {
         Keys.onPressed: event => {
             if (event.key === Qt.Key_Escape) {
                 root.hideRequested();
+                event.accepted = true;
             }
         }
 
