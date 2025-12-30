@@ -378,6 +378,7 @@ Singleton {
                     property real extraZoom: 1.1
                 }
                 property bool centerClock: true
+                property bool useSessionScreen: false // Show session screen button instead of individual buttons
                 property bool showLockedText: true
                 property JsonObject security: JsonObject {
                     property bool unlockKeyring: true

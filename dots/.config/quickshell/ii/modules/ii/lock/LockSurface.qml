@@ -9,6 +9,7 @@ import qs.modules.common.widgets
 import qs.modules.common.functions
 import qs.modules.common.panels.lock
 import qs.modules.ii.bar as Bar
+import qs.modules.ii.sessionScreen as SessionScreen
 import qs.modules.ii.onScreenKeyboard as OnScreenKeyboard
 import Quickshell
 import Quickshell.Services.SystemTray
@@ -22,7 +23,9 @@ MouseArea {
 
     // Force focus on entry
     function forceFieldFocus() {
-        passwordBox.forceActiveFocus();
+        if (!GlobalStates.sessionOpen) {
+            passwordBox.forceActiveFocus();
+        }
     }
     Connections {
         target: context
@@ -224,10 +227,14 @@ MouseArea {
                 text: {
                     if (root.context.targetAction === LockContext.ActionEnum.Unlock) {
                         return root.ctrlHeld ? "emoji_food_beverage" : "arrow_right_alt";
+                    } else if (root.context.targetAction === LockContext.ActionEnum.Logout) {
+                        return "logout";
                     } else if (root.context.targetAction === LockContext.ActionEnum.Poweroff) {
                         return "power_settings_new";
                     } else if (root.context.targetAction === LockContext.ActionEnum.Reboot) {
                         return "restart_alt";
+                    } else if (root.context.targetAction === LockContext.ActionEnum.RebootToFirmware) {
+                        return "settings_applications";
                     }
                 }
                 color: confirmButton.enabled ? Appearance.colors.colOnPrimary : Appearance.colors.colSubtext
@@ -322,18 +329,38 @@ MouseArea {
         }
 
         IconToolbarButton {
+            visible: Config.options.lock.useSessionScreen
+
+            id: sessionButton
+            text: "power_settings_new"
+            onClicked: {
+                GlobalStates.sessionOpen = true;
+            }
+            StyledToolTip {
+                text: Translation.tr("Session")
+                extraVisibleCondition: !GlobalStates.sessionOpen
+            }
+        }
+        
+        IconToolbarButton {
+            visible: !Config.options.lock.useSessionScreen
+
             id: sleepButton
             onClicked: Session.suspend()
             text: "dark_mode"
         }
 
         PasswordGuardedIconToolbarButton {
+            visible: !Config.options.lock.useSessionScreen
+
             id: powerButton
             text: "power_settings_new"
             targetAction: LockContext.ActionEnum.Poweroff
         }
 
         PasswordGuardedIconToolbarButton {
+            visible: !Config.options.lock.useSessionScreen
+
             id: rebootButton
             text: "restart_alt"
             targetAction: LockContext.ActionEnum.Reboot
@@ -389,5 +416,25 @@ MouseArea {
     
     OnScreenKeyboard.OnLockScreenKeyboard {
         id: olsk
+    }
+
+    SessionScreen.SessionScreenContent {
+        visible: GlobalStates.sessionOpen
+        requirePasswordToPower: root.requirePasswordToPower
+        onHideRequested: GlobalStates.sessionOpen = false
+
+        onVisibleChanged: {
+            if (!visible) {
+                root.context.shouldReFocus();
+            }
+        }
+
+        onRequestPower: (action) => {
+            if (root.context.targetAction === action) {
+                root.context.resetTargetAction();
+            } else {
+                root.context.targetAction = action;
+            }
+        }
     }
 }
