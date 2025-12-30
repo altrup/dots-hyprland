@@ -688,12 +688,14 @@ ContentPage {
         title: Translation.tr("On-screen keyboard")
 
         ConfigSlider {
-            icon: "zoom_out_map"
             text: Translation.tr("Size")
             value: Config.options.osk.maxWidthFraction
+            usePercentTooltip: true
+            buttonIcon: "zoom_out_map"
             from: 0
             to: 1
             stepSize: 0.01
+            stopIndicatorValues: [0.6]
             onValueChanged: {
                 Config.options.osk.maxWidthFraction = value;
             }
