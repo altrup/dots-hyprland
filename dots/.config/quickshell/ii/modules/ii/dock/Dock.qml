@@ -35,6 +35,14 @@ Scope { // Scope
                 right: true
             }
 
+            // Include in focus grab
+            Component.onCompleted: {
+                GlobalFocusGrab.addPersistent(dockRoot);
+            }
+            Component.onDestruction: {
+                GlobalFocusGrab.removePersistent(dockRoot);
+            }
+
             exclusiveZone: root.pinned ? implicitHeight - (Appearance.sizes.hyprlandGapsOut) - (Appearance.sizes.elevationMargin - Appearance.sizes.hyprlandGapsOut) : 0
 
             implicitWidth: dockBackground.implicitWidth
