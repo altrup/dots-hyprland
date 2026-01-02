@@ -10,7 +10,6 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
-import "./hasActive.js" as Utils
 
 Scope {
     id: overviewScope
@@ -45,11 +44,7 @@ Scope {
 
             HyprlandFocusGrab {
                 id: grab
-                windows: {
-                    // Workaround: disallow other windows if search is no longer focused
-                    return (visible && !Utils.hasActive(columnLayout)) ? [root] : 
-                        [root, GlobalStates.oskWindowReference, ...GlobalStates.barWindowReferences];
-                }
+                windows: [root, GlobalStates.oskWindowReference, GlobalStates.barWindowReference]
                 property bool canBeActive: root.monitorIsFocused
                 active: false
                 onCleared: () => {
@@ -68,8 +63,8 @@ Scope {
                         if (!overviewScope.dontAutoCancelSearch) {
                             searchWidget.cancelSearch();
                         }
+                        delayedGrabTimer.start();
                     }
-                    delayedGrabTimer.start();
                 }
             }
 
