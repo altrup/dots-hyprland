@@ -27,16 +27,6 @@ Scope { // Scope
             id: oskRoot
             visible: oskLoader.active && !GlobalStates.screenLocked
 
-            Component.onCompleted: {
-                // Save reference to osk window object
-                GlobalStates.oskWindowReference = oskRoot;
-            }
-
-            Component.onDestruction: {
-                // Clear reference to osk window object
-                GlobalStates.oskWindowReference = null;
-            }
-
             anchors {
                 bottom: true
                 left: true
