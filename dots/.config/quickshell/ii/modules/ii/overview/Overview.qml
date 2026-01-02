@@ -45,9 +45,11 @@ Scope {
 
             HyprlandFocusGrab {
                 id: grab
-                // Workaround: disallow other windows if search is no longer focused
-                windows: (visible && !Utils.hasActive(columnLayout)) ? [root] : 
-                    [root, GlobalStates.oskWindowReference, ...GlobalStates.barWindowReferences];
+                windows: {
+                    // Workaround: disallow other windows if search is no longer focused
+                    return (visible && !Utils.hasActive(columnLayout)) ? [root] : 
+                        [root, GlobalStates.oskWindowReference, ...GlobalStates.barWindowReferences];
+                }
                 property bool canBeActive: root.monitorIsFocused
                 active: false
                 onCleared: () => {
