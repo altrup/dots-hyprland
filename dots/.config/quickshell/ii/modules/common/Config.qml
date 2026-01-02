@@ -602,7 +602,6 @@ Singleton {
 
             property JsonObject hacks: JsonObject {
                 property int arbitraryRaceConditionDelay: 20 // milliseconds
-                property int arbitraryLongRaceConditionDelay: 100 // milliseconds
             }
 
             property JsonObject workSafety: JsonObject {
