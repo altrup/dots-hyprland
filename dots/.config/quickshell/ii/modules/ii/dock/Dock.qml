@@ -37,6 +37,14 @@ Scope { // Scope
                 right: true
             }
 
+            // Include in focus grab
+            Component.onCompleted: {
+                GlobalFocusGrab.addPersistent(dockRoot);
+            }
+            Component.onDestruction: {
+                GlobalFocusGrab.removePersistent(dockRoot);
+            }
+
             exclusiveZone: root.pinned ? implicitHeight : 0
             exclusionMode: (root.pinned || !HyprlandData.windowList.some(w => w.workspace.id == currentWorkspaceID)) ? ExclusionMode.Normal : ExclusionMode.Ignore
 
