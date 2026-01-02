@@ -100,10 +100,11 @@ Scope {
             Loader {
                 id: overviewLoader
                 anchors.horizontalCenter: parent.horizontalCenter
-                active: GlobalStates.overviewOpen && (Config?.options.overview.enable ?? true)
+                active: GlobalStates.overviewOpen && (Config?.options.overview.enable ?? true) && (panelWindow.searchingText == "")
+                width: active ? implicitWidth : 0
+                height: active ? implicitHeight : 0
                 sourceComponent: OverviewWidget {
                     screen: panelWindow.screen
-                    visible: (panelWindow.searchingText == "")
                 }
             }
         }
