@@ -178,7 +178,7 @@ switch() {
     if [[ "$color_flag" == "1" ]]; then
         matugen_args=(color hex "$color")
         generate_colors_material_args=(--color "$color")
-    else
+    else # Generate colors from wallpaper
         if [[ -z "$imgpath" ]]; then
             echo 'Aborted'
             exit 0
@@ -215,9 +215,6 @@ switch() {
                 exit 0
             fi
 
-            # Set wallpaper path
-            set_wallpaper_path "$imgpath"
-
             # Set video wallpaper
             local video_path="$imgpath"
             monitors=$(hyprctl monitors -j | jq -r '.[] | .name')
@@ -245,10 +242,13 @@ switch() {
         else
             matugen_args=(image "$imgpath")
             generate_colors_material_args=(--path "$imgpath")
-            # Update wallpaper path in config
-            set_wallpaper_path "$imgpath"
             remove_restore
         fi
+    fi
+
+    if [[ -n "$imgpath" ]]; then
+        # Set wallpaper path
+        set_wallpaper_path "$imgpath"
     fi
 
     # Determine mode if not set
