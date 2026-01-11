@@ -64,16 +64,20 @@ Scope {
                 exclusiveZone: (barRoot.autoHideEnable && (!mustShow || !Config?.options.bar.autoHide.pushWindows)) ? 0 :
                     Appearance.sizes.baseBarHeight + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)
                 WlrLayershell.namespace: "quickshell:bar"
-                WlrLayershell.layer: windowFullscreen === 2 ? WlrLayer.Overlay : WlrLayer.Top
                 implicitHeight: Appearance.sizes.barHeight + Appearance.rounding.screenRounding
                 mask: Region {
                     item: hoverMaskRegion
                 }
                 color: "transparent"
 
+                property int oldWindowFullscreen: 0
                 onWindowFullscreenChanged: () => {
-                    visible = false;
-                    visible = true;
+                    if (oldWindowFullscreen === 2 || windowFullscreen === 2) {
+                        // Forces bar to appear above fullscreen window
+                        visible = false;
+                        visible = true;
+                    }
+                    oldWindowFullscreen = windowFullscreen
                 }
 
                 // Positioning
