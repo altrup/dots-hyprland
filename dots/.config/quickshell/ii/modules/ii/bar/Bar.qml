@@ -35,8 +35,9 @@ Scope {
                 property var currentWorkspaceID: hyprlandDataMonitor?.specialWorkspace.id || hyprlandDataMonitor?.activeWorkspace.id
                 property var biggestWindow: HyprlandData.biggestWindowForWorkspace(currentWorkspaceID)
                 property var window: HyprlandData.activeWindow?.workspace?.id === currentWorkspaceID ? HyprlandData.activeWindow : biggestWindow
+                property var windowFullscreen: window?.fullscreen
 
-                property bool autoHideEnable: window?.fullscreen === 2 || Config?.options.bar.autoHide.enable
+                property bool autoHideEnable: windowFullscreen === 2 || Config?.options.bar.autoHide.enable
 
                 Timer {
                     id: showBarTimer
@@ -63,11 +64,17 @@ Scope {
                 exclusiveZone: (barRoot.autoHideEnable && (!mustShow || !Config?.options.bar.autoHide.pushWindows)) ? 0 :
                     Appearance.sizes.baseBarHeight + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)
                 WlrLayershell.namespace: "quickshell:bar"
+                WlrLayershell.layer: windowFullscreen === 2 ? WlrLayer.Overlay : WlrLayer.Top
                 implicitHeight: Appearance.sizes.barHeight + Appearance.rounding.screenRounding
                 mask: Region {
                     item: hoverMaskRegion
                 }
                 color: "transparent"
+
+                onWindowFullscreenChanged: () => {
+                    visible = false;
+                    visible = true;
+                }
 
                 // Positioning
                 anchors {
