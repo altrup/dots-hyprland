@@ -1,4 +1,5 @@
 pragma ComponentBehavior: Bound
+import qs
 import qs.modules.common
 import qs.modules.common.utils
 import qs.modules.common.functions
@@ -25,6 +26,13 @@ PanelWindow {
         right: true
         top: true
         bottom: true
+    }
+
+    Connections {
+        target: GlobalStates
+        function onScreenLockedChanged() {
+            root.visible = !GlobalStates.screenLocked;
+        }
     }
 
     // TODO: Ask: sidebar AI
