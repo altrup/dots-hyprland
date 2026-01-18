@@ -58,11 +58,12 @@ Scope {
                     }
                 }
                 property bool superShow: false
-                property bool mustShow: hoverRegion.containsMouse || superShow
+                property bool mustShow: (hoverRegion.containsMouse || superShow) && (Config?.options.bar.autoHide.enableOnFullscreen || window?.fullscreen !== 2)
                 exclusionMode: ExclusionMode.Ignore
-                exclusiveZone: (barRoot.autoHideEnable && (!mustShow || !Config?.options.bar.autoHide.pushWindows)) ? 0 :
+                exclusiveZone: (barRoot.autoHideEnable && (!mustShow || (window?.fullscreen !== 2 && !Config?.options.bar.autoHide.pushWindows))) ? 0 :
                     Appearance.sizes.baseBarHeight + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)
                 WlrLayershell.namespace: "quickshell:bar"
+                WlrLayershell.layer: WlrLayer.Overlay
                 implicitHeight: Appearance.sizes.barHeight + Appearance.rounding.screenRounding
                 mask: Region {
                     item: hoverMaskRegion
