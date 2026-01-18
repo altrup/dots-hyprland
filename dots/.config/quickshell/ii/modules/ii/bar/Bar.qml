@@ -159,7 +159,7 @@ Scope {
                             bottom: undefined
                         }
                         height: Appearance.rounding.screenRounding
-                        active: showBarBackground && Config.options.bar.cornerStyle === 0 // Hug
+                        active: showBarBackground && Config.options.bar.cornerStyle === 0 && (window?.fullscreen !== 2 || Config.options.appearance.fakeScreenRounding === 1) // Hug
 
                         states: State {
                             name: "bottom"
