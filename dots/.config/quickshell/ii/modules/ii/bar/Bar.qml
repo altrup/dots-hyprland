@@ -158,8 +158,12 @@ Scope {
                             top: barContent.bottom
                             bottom: undefined
                         }
-                        height: Appearance.rounding.screenRounding
-                        active: showBarBackground && Config.options.bar.cornerStyle === 0 && (window?.fullscreen !== 2 || Config.options.appearance.fakeScreenRounding === 1) // Hug
+                        height: mustShow || window?.fullscreen !== 2 || Config.options.appearance.fakeScreenRounding === 1 ? Appearance.rounding.screenRounding : 0
+                        active: showBarBackground && Config.options.bar.cornerStyle === 0 // Hug
+
+                        Behavior on height {
+                            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                        }
 
                         states: State {
                             name: "bottom"
@@ -176,7 +180,7 @@ Scope {
                         }
 
                         sourceComponent: Item {
-                            implicitHeight: Appearance.rounding.screenRounding
+                            implicitHeight: roundDecorators.height
                             RoundCorner {
                                 id: leftCorner
                                 anchors {
@@ -185,7 +189,7 @@ Scope {
                                     left: parent.left
                                 }
 
-                                implicitSize: Appearance.rounding.screenRounding
+                                implicitSize: roundDecorators.height
                                 color: showBarBackground ? Appearance.colors.colLayer0 : "transparent"
 
                                 corner: RoundCorner.CornerEnum.TopLeft
@@ -204,7 +208,7 @@ Scope {
                                     top: !Config.options.bar.bottom ? parent.top : undefined
                                     bottom: Config.options.bar.bottom ? parent.bottom : undefined
                                 }
-                                implicitSize: Appearance.rounding.screenRounding
+                                implicitSize: roundDecorators.height
                                 color: showBarBackground ? Appearance.colors.colLayer0 : "transparent"
 
                                 corner: RoundCorner.CornerEnum.TopRight
