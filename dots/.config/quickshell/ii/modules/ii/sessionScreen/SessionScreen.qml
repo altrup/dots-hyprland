@@ -56,36 +56,6 @@ Scope {
             implicitWidth: root.focusedScreen?.width ?? 0
             implicitHeight: root.focusedScreen?.height ?? 0
 
-            component ScreenCorner: RoundCorner {
-                visible: (Config.options.appearance.fakeScreenRounding === 1 || (Config.options.appearance.fakeScreenRounding === 2 && !fullscreen))
-                
-                anchors {
-                    top: isTopLeft || isTopRight ? parent.top : undefined
-                    left: isBottomLeft || isTopLeft ? parent.left : undefined
-                    bottom: isBottomLeft || isBottomRight ? parent.bottom: undefined
-                    right: isTopRight || isBottomRight ? parent.right: undefined
-                }
-
-                rightVisualMargin: (Config.options.interactions.deadPixelWorkaround.enable && (isTopRight || isBottomRight)) * 1
-                bottomVisualMargin: (Config.options.interactions.deadPixelWorkaround.enable && (isBottomLeft || isBottomRight)) * 1
-
-                implicitSize: Appearance.rounding.screenRounding
-                implicitHeight: implicitSize
-                implicitWidth: implicitSize
-            }
-            ScreenCorner {
-                corner: RoundCorner.CornerEnum.TopLeft
-            }
-            ScreenCorner {
-                corner: RoundCorner.CornerEnum.TopRight
-            }
-            ScreenCorner {
-                corner: RoundCorner.CornerEnum.BottomLeft
-            }
-            ScreenCorner {
-                corner: RoundCorner.CornerEnum.BottomRight
-            }
-
             MouseArea {
                 id: sessionMouseArea
                 anchors.fill: parent
