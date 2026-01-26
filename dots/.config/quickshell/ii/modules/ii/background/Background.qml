@@ -70,7 +70,7 @@ Variants {
         // Layer props
         screen: modelData
         exclusionMode: ExclusionMode.Ignore
-        WlrLayershell.layer: WlrLayer.Background
+        WlrLayershell.layer: (GlobalStates.screenLocked && !scaleAnim.running) ? WlrLayer.Overlay : WlrLayer.Background
         WlrLayershell.namespace: "quickshell:background"
         anchors {
             top: true
