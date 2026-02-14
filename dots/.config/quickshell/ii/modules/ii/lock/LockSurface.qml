@@ -139,6 +139,8 @@ MouseArea {
             // Style
             clip: true
             font.pixelSize: Appearance.font.pixelSize.small
+            selectedTextColor: materialShapeChars ? "transparent" : Appearance.colors.colOnSecondaryContainer
+            selectionColor: materialShapeChars ? "transparent" : Appearance.colors.colSecondaryContainer
 
             // Password
             enabled: !root.context.unlockInProgress
@@ -198,6 +200,9 @@ MouseArea {
                 }
                 sourceComponent: PasswordChars {
                     length: root.context.currentText.length
+                    selectionStart: passwordBox.selectionStart
+                    selectionEnd: passwordBox.selectionEnd
+                    cursorPosition: passwordBox.cursorPosition
                 }
             }
         }
@@ -218,7 +223,7 @@ MouseArea {
                 iconSize: 24
                 text: {
                     if (root.context.targetAction === LockContext.ActionEnum.Unlock) {
-                        return root.ctrlHeld ? "emoji_food_beverage" : "arrow_right_alt";
+                        return root.ctrlHeld ? "coffee" : "arrow_right_alt";
                     } else if (root.context.targetAction === LockContext.ActionEnum.Logout) {
                         return "logout";
                     } else if (root.context.targetAction === LockContext.ActionEnum.Poweroff) {

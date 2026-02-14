@@ -259,7 +259,7 @@ Rectangle {
         }
     }
 
-    RowLayout {
+    ColumnLayout {
         anchors {
             top: contentColumn.bottom
             topMargin: 10
@@ -268,19 +268,22 @@ Rectangle {
         spacing: 10
 
         Loader {
-            active: SessionWarnings.packageManagerRunning
+            Layout.alignment: Qt.AlignHCenter
+            active: SessionWarnings.downloadRunning
             visible: active
             sourceComponent: DescriptionLabel {
-                text: Translation.tr("Your package manager is running")
+                text: Translation.tr("There might be a download in progress. Check your Downloads folder.")
                 textColor: Appearance.m3colors.m3onErrorContainer
                 color: Appearance.m3colors.m3errorContainer
             }
         }
+
         Loader {
-            active: SessionWarnings.downloadRunning
+            Layout.alignment: Qt.AlignHCenter
+            active: SessionWarnings.packageManagerRunning
             visible: active
             sourceComponent: DescriptionLabel {
-                text: Translation.tr("There might be a download in progress")
+                text: Translation.tr("Your package manager is running")
                 textColor: Appearance.m3colors.m3onErrorContainer
                 color: Appearance.m3colors.m3errorContainer
             }
