@@ -375,6 +375,12 @@ Singleton {
                     property string to: "06:30"   // Format: "HH:mm", 24-hour time
                     property int colorTemperature: 5000
                 }
+                property JsonObject dim: JsonObject {
+                    property bool automatic: false
+                    property string from: "19:00" // Format: "HH:mm", 24-hour time
+                    property string to: "06:30"   // Format: "HH:mm", 24-hour time
+                    property int gamma: 50
+                }
                 property JsonObject antiFlashbang: JsonObject {
                     property bool enable: false
                 }
