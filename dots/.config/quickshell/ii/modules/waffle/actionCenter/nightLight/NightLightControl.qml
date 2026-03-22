@@ -89,7 +89,7 @@ Item {
             iconName: WIcons.nightLightIcon
             checked: Hyprsunset.active
             onCheckedChanged: {
-                Hyprsunset.toggleTemperature(checked);
+                Hyprsunset.toggle(checked);
             }
         }
 

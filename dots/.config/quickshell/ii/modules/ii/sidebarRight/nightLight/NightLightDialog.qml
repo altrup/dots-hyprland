@@ -44,9 +44,9 @@ WindowDialog {
             iconSize: Appearance.font.pixelSize.larger
             buttonIcon: "check"
             text: Translation.tr("Enable now")
-            checked: Hyprsunset.temperatureActive
+            checked: Hyprsunset.active
             onCheckedChanged: {
-                Hyprsunset.toggleTemperature(checked)
+                Hyprsunset.toggle(checked)
             }
         }
 
@@ -158,20 +158,6 @@ WindowDialog {
             // text: Translation.tr("Brightness")
             value: root.brightnessMonitor.brightness
             onMoved: root.brightnessMonitor.setBrightness(value)
-        }
-
-        ConfigSwitch {
-            anchors {
-                left: parent.left
-                right: parent.right
-            }
-            iconSize: Appearance.font.pixelSize.larger
-            buttonIcon: "light_mode"
-            text: Translation.tr("Extra Dim")
-            checked: Hyprsunset.gammaActive
-            onCheckedChanged: {
-                Hyprsunset.toggleGamma(checked)
-            }
         }
     }
     

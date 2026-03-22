@@ -17,11 +17,9 @@ Singleton {
     property string to: Config.options?.light?.night?.to ?? "06:30"
     property bool automatic: Config.options?.light?.night?.automatic && (Config?.ready ?? true)
     property int colorTemperature: Config.options?.light?.night?.colorTemperature ?? 5000
-    property int gamma: Config.options?.light?.gamma ?? 50
     property bool shouldBeOn
     property bool firstEvaluation: true
-    property bool temperatureActive: false
-    property bool gammaActive: false // NOTE: no auto time for this
+    property bool active: false
 
     property int fromHour: Number(from.split(":")[0])
     property int fromMinute: Number(from.split(":")[1])
@@ -73,56 +71,24 @@ Singleton {
         if (!root.automatic || root.manualActive !== undefined)
             return;
         if (root.shouldBeOn) {
-            root.enableTemperature();
+            root.enable();
         } else {
-            root.disableTemperature();
+            root.disable();
         }
     }
 
     function load() { } // Dummy to force init
 
-    function enableTemperature() {
-        root.temperatureActive = true;
+    function enable() {
+        root.active = true;
         // console.log("[Hyprsunset] Enabling");
-        Quickshell.execDetached(["bash", "-c", `
-            if pidof hyprsunset > /dev/null; then
-                hyprctl hyprsunset temperature ${root.colorTemperature};
-            else
-                hyprsunset --temperature ${root.colorTemperature};
-            fi
-        `]);
+        Quickshell.execDetached(["bash", "-c", `pidof hyprsunset || hyprsunset --temperature ${root.colorTemperature}`]);
     }
 
-    function disableTemperature() {
-        root.temperatureActive = false;
+    function disable() {
+        root.active = false;
         // console.log("[Hyprsunset] Disabling");
-        if (!root.gammaActive) {
-            Quickshell.execDetached(["bash", "-c", `pkill hyprsunset`]);
-        } else {
-            Quickshell.execDetached(["hyprctl", "hyprsunset", "identity"]);
-        }
-    }
-
-    function enableGamma() {
-        root.gammaActive = true;
-        // console.log("[Hyprsunset] Enabling");
-        Quickshell.execDetached(["bash", "-c", `
-            if pidof hyprsunset > /dev/null; then
-                hyprctl hyprsunset gamma ${root.gamma};
-            else
-                hyprsunset --gamma ${root.gamma};
-            fi
-        `]);
-    }
-
-    function disableGamma() {
-        root.gammaActive = false;
-        // console.log("[Hyprsunset] Disabling");
-        if (!root.temperatureActive) {
-            Quickshell.execDetached(["bash", "-c", `pkill hyprsunset`]);
-        } else {
-            Quickshell.execDetached(["hyprctl", "hyprsunset", "gamma", "100"]);
-        }
+        Quickshell.execDetached(["bash", "-c", `pkill hyprsunset`]);
     }
 
     function fetchState() {
@@ -138,35 +104,26 @@ Singleton {
             onStreamFinished: {
                 const output = stateCollector.text.trim();
                 if (output.length == 0 || output.startsWith("Couldn't"))
-                    root.temperatureActive = false;
+                    root.active = false;
                 else
-                    root.temperatureActive = (output != "6500"); // 6500 is the default when off
-                // console.log("[Hyprsunset] Fetched state:", output, "->", root.temperatureActive);
+                    root.active = (output != "6500"); // 6500 is the default when off
+                // console.log("[Hyprsunset] Fetched state:", output, "->", root.active);
             }
         }
     }
 
-    function toggleTemperature(active = undefined) {
+    function toggle(active = undefined) {
         if (root.manualActive === undefined) {
-            root.manualActive = root.temperatureActive;
+            root.manualActive = root.active;
             root.manualActiveHour = root.clockHour;
             root.manualActiveMinute = root.clockMinute;
         }
 
         root.manualActive = active !== undefined ? active : !root.manualActive;
         if (root.manualActive) {
-            root.enableTemperature();
+            root.enable();
         } else {
-            root.disableTemperature();
-        }
-    }
-
-    function toggleGamma(active = undefined) {
-        root.gammaActive = active !== undefined ? active : !root.gammaActive;
-        if (root.gammaActive) {
-            root.enableGamma();
-        } else {
-            root.disableGamma();
+            root.disable();
         }
     }
 
@@ -174,7 +131,7 @@ Singleton {
     Connections {
         target: Config.options.light.night
         function onColorTemperatureChanged() {
-            if (!root.temperatureActive) return;
+            if (!root.active) return;
             Hyprland.dispatch(`hyprctl hyprsunset temperature ${Config.options.light.night.colorTemperature}`);
             Quickshell.execDetached(["hyprctl", "hyprsunset", "temperature", `${Config.options.light.night.colorTemperature}`]);
         }
