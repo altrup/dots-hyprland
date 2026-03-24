@@ -114,9 +114,7 @@ Slider {
 
             Loader {
                 required property real index
-                anchors {
-                    verticalCenter: background.verticalCenter
-                }
+                anchors.verticalCenter: background.verticalCenter
                 property real leftMargin: index > 0 ? root.dividerMargins : 0
                 property real rightMargin: index < background.leftWidths.length - 1 ? root.dividerMargins : root.handleMargins
                 x: background.leftValues[index] * root.effectiveDraggingWidth + leftMargin + (index > 0 ? leftPadding : 0)
@@ -138,9 +136,7 @@ Slider {
 
             Loader {
                 required property int index
-                anchors {
-                    verticalCenter: background.verticalCenter
-                }
+                anchors.verticalCenter: background.verticalCenter
                 property real leftMargin: index > 0 ? root.dividerMargins : 0
                 property real rightMargin: index < background.leftWidths.length - 1 ? root.dividerMargins : root.handleMargins
                 x: background.leftValues[index] * root.effectiveDraggingWidth + leftMargin + (index > 0 ? leftPadding : 0)
@@ -176,9 +172,7 @@ Slider {
 
             Rectangle {
                 required property int index
-                anchors {
-                    verticalCenter: background.verticalCenter
-                }
+                anchors.verticalCenter: background.verticalCenter
                 property real leftMargin: index > 0 ? root.dividerMargins : root.handleMargins
                 property real rightMargin: index < background.rightWidths.length - 1 ? root.dividerMargins : 0
                 x: background.rightValues[index] * root.effectiveDraggingWidth + leftMargin + (index === 0 ? handleWidth / 2 : 0) + leftPadding
@@ -208,7 +202,7 @@ Slider {
 
         implicitWidth: root.handleWidth
         implicitHeight: root.handleHeight
-        x: leftPadding + (root.visualPosition * root.effectiveDraggingWidth) - (root.handleWidth / 2)
+        x: root.leftPadding + (root.visualPosition * root.effectiveDraggingWidth) - (root.handleWidth / 2)
         anchors.verticalCenter: parent.verticalCenter
         radius: Appearance.rounding.full
         color: root.handleColor
