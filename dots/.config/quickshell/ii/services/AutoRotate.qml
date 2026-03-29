@@ -7,7 +7,7 @@ pragma Singleton
 pragma ComponentBehavior: Bound
 
 /**
- * Handles EasyEffects active state and presets.
+ * Handles iio-hyprland active state and presets.
  */
 Singleton {
     id: root
@@ -25,12 +25,12 @@ Singleton {
 
     function disable() {
         root.active = false
-        Quickshell.execDetached(["bash", "-c", "pkill easyeffects || flatpak pkill com.github.wwmm.easyeffects"])
+        Quickshell.execDetached(["bash", "-c", "pkill iio-hyprland"])
     }
 
     function enable() {
         root.active = true
-        Quickshell.execDetached(["bash", "-c", "easyeffects --hide-window --service-mode || easyeffects --gapplication-service || flatpak run com.github.wwmm.easyeffects --hide-window --service-mode"])
+        Quickshell.execDetached(["bash", "-c", "iio-hyprland"])
     }
 
     function toggle() {
@@ -44,7 +44,7 @@ Singleton {
     Process {
         id: fetchAvailabilityProc
         running: true
-        command: ["bash", "-c", "command -v easyeffects || flatpak info com.github.wwmm.easyeffects > /dev/null 2>&1"]
+        command: ["bash", "-c", "command -v iio-hyprland > /dev/null 2>&1"]
         onExited: (exitCode, exitStatus) => {
             root.available = exitCode === 0
         }
@@ -53,7 +53,7 @@ Singleton {
     Process {
         id: fetchActiveStateProc
         running: true
-        command: ["bash", "-c", "pidof easyeffects || flatpak ps | grep com.github.wwmm.easyeffects > /dev/null 2>&1"]
+        command: ["bash", "-c", "pidof iio-hyprland > /dev/null 2>&1"]
         onExited: (exitCode, exitStatus) => {
             root.active = exitCode === 0
         }

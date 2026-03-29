@@ -233,6 +233,7 @@ Singleton {
             property JsonObject bar: JsonObject {
                 property JsonObject autoHide: JsonObject {
                     property bool enable: false
+                    property bool enableOnFullscreen: false
                     property int hoverRegionWidth: 2
                     property bool pushWindows: false
                     property JsonObject showWhenPressingSuper: JsonObject {
@@ -266,15 +267,23 @@ Singleton {
                 }
                 property JsonObject utilButtons: JsonObject {
                     property bool showScreenSnip: true
+                    property bool alwaysShowScreenSnip: false
                     property bool showColorPicker: false
+                    property bool alwaysShowColorPicker: false
                     property bool showMicToggle: false
+                    property bool alwaysShowMicToggle: false
                     property bool showKeyboardToggle: true
+                    property bool alwaysShowKeyboardToggle: true
                     property bool showDarkModeToggle: true
+                    property bool alwaysShowDarkModeToggle: false
                     property bool showPerformanceProfileToggle: false
+                    property bool alwaysShowPerformanceProfileToggle: false
                     property bool showScreenRecord: false
+                    property bool alwaysShowScreenRecord: false
                 }
                 property JsonObject weather: JsonObject {
                     property bool enable: false
+                    property bool alwaysShow: false
                     property bool enableGPS: true // gps based location
                     property string city: "" // When 'enableGPS' is false
                     property bool useUSCS: false // Instead of metric (SI) units
@@ -391,6 +400,7 @@ Singleton {
                     property real extraZoom: 1.1
                 }
                 property bool centerClock: true
+                property bool useSessionScreen: true // Show session screen button instead of individual buttons
                 property bool showLockedText: true
                 property JsonObject security: JsonObject {
                     property bool unlockKeyring: true
@@ -419,6 +429,7 @@ Singleton {
             property JsonObject osk: JsonObject {
                 property string layout: "qwerty_full"
                 property bool pinnedOnStartup: false
+                property real maxWidthFraction: 0.6 // Fraction of max(screenWidth, screenHeight)
             }
 
             property JsonObject overlay: JsonObject {
@@ -559,7 +570,19 @@ Singleton {
                             {
                                 "size": 2,
                                 "type": "nightLight"
-                            }
+                            },
+                            {
+                                "size": 2,
+                                "type": "powerProfile"
+                            },
+                            {
+                                "size": 1,
+                                "type": "darkMode"
+                            },
+                            {
+                                "size": 2,
+                                "type": "easyEffects"
+                            },
                         ]
                     }
                 }
@@ -588,10 +611,10 @@ Singleton {
 
             property JsonObject time: JsonObject {
                 // https://doc.qt.io/qt-6/qtime.html#toString
-                property string format: "hh:mm"
-                property string shortDateFormat: "dd/MM"
-                property string dateWithYearFormat: "dd/MM/yyyy"
-                property string dateFormat: "ddd, dd/MM"
+                property string format: "h:mm A"
+                property string shortDateFormat: "MM/dd"
+                property string dateWithYearFormat: "MM/dd/yyyy"
+                property string dateFormat: "ddd, MM/dd"
                 property JsonObject pomodoro: JsonObject {
                     property int breakTime: 300
                     property int cyclesBeforeLongBreak: 4

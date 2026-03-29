@@ -31,6 +31,13 @@ Scope {
                 id: barRoot
                 screen: barLoader.modelData
 
+                property var hyprlandDataMonitor: HyprlandData.monitors.find(m => m.name === screen.name)
+                property var currentWorkspaceID: hyprlandDataMonitor?.specialWorkspace.id || hyprlandDataMonitor?.activeWorkspace.id
+                property var biggestWindow: HyprlandData.biggestWindowForWorkspace(currentWorkspaceID)
+                property var window: HyprlandData.activeWindow?.workspace?.id === currentWorkspaceID ? HyprlandData.activeWindow : biggestWindow
+
+                property bool autoHideEnable: window?.fullscreen === 2 || Config?.options.bar.autoHide.enable
+
                 Timer {
                     id: showBarTimer
                     interval: (Config?.options.bar.autoHide.showWhenPressingSuper.delay ?? 100)
@@ -51,11 +58,15 @@ Scope {
                     }
                 }
                 property bool superShow: false
-                property bool mustShow: hoverRegion.containsMouse || superShow
+                property bool mustShow: (hoverRegion.containsMouse || superShow) && (Config?.options.bar.autoHide.enableOnFullscreen || window?.fullscreen !== 2)
                 exclusionMode: ExclusionMode.Ignore
-                exclusiveZone: (Config?.options.bar.autoHide.enable && (!mustShow || !Config?.options.bar.autoHide.pushWindows)) ? 0 :
+                exclusiveZone: (barRoot.autoHideEnable && (!mustShow || (window?.fullscreen !== 2 && !Config?.options.bar.autoHide.pushWindows))) ? 0 :
                     Appearance.sizes.baseBarHeight + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)
+                Behavior on exclusiveZone {
+                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
                 WlrLayershell.namespace: "quickshell:bar"
+                WlrLayershell.layer: WlrLayer.Overlay
                 implicitHeight: Appearance.sizes.barHeight + Appearance.rounding.screenRounding
                 mask: Region {
                     item: hoverMaskRegion
@@ -110,7 +121,7 @@ Scope {
                             left: parent.left
                             top: parent.top
                             bottom: undefined
-                            topMargin: (Config?.options.bar.autoHide.enable && !mustShow) ? -Appearance.sizes.barHeight : 0
+                            topMargin: (barRoot.autoHideEnable && !mustShow) ? -Appearance.sizes.barHeight : 0
                             bottomMargin: (Config.options.interactions.deadPixelWorkaround.enable && barRoot.anchors.bottom) * -1
                             rightMargin: (Config.options.interactions.deadPixelWorkaround.enable && barRoot.anchors.right) * -1
                         }
@@ -136,7 +147,7 @@ Scope {
                             PropertyChanges {
                                 target: barContent
                                 anchors.topMargin: 0
-                                anchors.bottomMargin: (Config?.options.bar.autoHide.enable && !mustShow) ? -Appearance.sizes.barHeight : 0
+                                anchors.bottomMargin: (barRoot.autoHideEnable && !mustShow) ? -Appearance.sizes.barHeight : 0
                             }
                         }
                     }
@@ -150,8 +161,12 @@ Scope {
                             top: barContent.bottom
                             bottom: undefined
                         }
-                        height: Appearance.rounding.screenRounding
+                        height: mustShow || barRoot.window?.fullscreen !== 2 || Config.options.appearance.fakeScreenRounding === 1 ? Appearance.rounding.screenRounding : 0
                         active: showBarBackground && Config.options.bar.cornerStyle === 0 // Hug
+
+                        Behavior on height {
+                            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                        }
 
                         states: State {
                             name: "bottom"
@@ -168,7 +183,7 @@ Scope {
                         }
 
                         sourceComponent: Item {
-                            implicitHeight: Appearance.rounding.screenRounding
+                            implicitHeight: roundDecorators.height
                             RoundCorner {
                                 id: leftCorner
                                 anchors {
@@ -177,7 +192,7 @@ Scope {
                                     left: parent.left
                                 }
 
-                                implicitSize: Appearance.rounding.screenRounding
+                                implicitSize: roundDecorators.height
                                 color: showBarBackground ? Appearance.colors.colLayer0 : "transparent"
 
                                 corner: RoundCorner.CornerEnum.TopLeft
@@ -196,7 +211,7 @@ Scope {
                                     top: !Config.options.bar.bottom ? parent.top : undefined
                                     bottom: Config.options.bar.bottom ? parent.bottom : undefined
                                 }
-                                implicitSize: Appearance.rounding.screenRounding
+                                implicitSize: roundDecorators.height
                                 color: showBarBackground ? Appearance.colors.colLayer0 : "transparent"
 
                                 corner: RoundCorner.CornerEnum.TopRight

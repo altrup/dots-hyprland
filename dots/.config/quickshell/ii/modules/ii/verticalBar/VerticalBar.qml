@@ -32,6 +32,13 @@ Scope {
                 id: barRoot
                 screen: barLoader.modelData
 
+                property var hyprlandDataMonitor: HyprlandData.monitors.find(m => m.name === screen.name)
+                property var currentWorkspaceID: hyprlandDataMonitor?.specialWorkspace.id || hyprlandDataMonitor?.activeWorkspace.id
+                property var biggestWindow: HyprlandData.biggestWindowForWorkspace(currentWorkspaceID)
+                property var window: HyprlandData.activeWindow?.workspace?.id === currentWorkspaceID ? HyprlandData.activeWindow : biggestWindow
+
+                property bool autoHideEnable: window?.fullscreen === 2 || Config?.options.bar.autoHide.enable
+
                 property var brightnessMonitor: Brightness.getMonitorForScreen(barLoader.modelData)
                 
                 Timer {
@@ -54,12 +61,15 @@ Scope {
                     }
                 }
                 property bool superShow: false
-                property bool mustShow: hoverRegion.containsMouse || superShow
+                property bool mustShow: (hoverRegion.containsMouse || superShow) && (Config?.options.bar.autoHide.enableOnFullscreen || window?.fullscreen !== 2)
                 exclusionMode: ExclusionMode.Ignore
-                exclusiveZone: (Config?.options.bar.autoHide.enable && (!mustShow || !Config?.options.bar.autoHide.pushWindows)) ? 0 :
+                exclusiveZone: (barRoot.autoHideEnable && (!mustShow || (window?.fullscreen !== 2 && !Config?.options.bar.autoHide.pushWindows))) ? 0 :
                     Appearance.sizes.baseVerticalBarWidth + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)
+                Behavior on exclusiveZone {
+                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                }
                 WlrLayershell.namespace: "quickshell:verticalBar"
-                // WlrLayershell.layer: WlrLayer.Overlay // TODO enable this when bar can hide when fullscreen
+                WlrLayershell.layer: WlrLayer.Overlay
                 implicitWidth: Appearance.sizes.verticalBarWidth + Appearance.rounding.screenRounding
                 mask: Region {
                     item: hoverMaskRegion
@@ -105,7 +115,7 @@ Scope {
                             bottom: parent.bottom
                             left: parent.left
                             right: undefined
-                            leftMargin: (Config?.options.bar.autoHide.enable && !mustShow) ? -Appearance.sizes.verticalBarWidth : 0
+                            leftMargin: (barRoot.autoHideEnable && !mustShow) ? -Appearance.sizes.verticalBarWidth : 0
                             rightMargin: 0
                         }
                         Behavior on anchors.leftMargin {
@@ -130,7 +140,7 @@ Scope {
                             PropertyChanges {
                                 target: barContent
                                 anchors.topMargin: 0
-                                anchors.rightMargin: (Config?.options.bar.autoHide.enable && !mustShow) ? -Appearance.sizes.barHeight : 0
+                                anchors.rightMargin: (barRoot.autoHideEnable && !mustShow) ? -Appearance.sizes.verticalBarWidth : 0
                             }
                         }
                     }
@@ -144,8 +154,12 @@ Scope {
                             left: barContent.right
                             right: undefined
                         }
-                        width: Appearance.rounding.screenRounding
+                        width: mustShow || window?.fullscreen !== 2 || Config.options.appearance.fakeScreenRounding === 1 ? Appearance.rounding.screenRounding : 0
                         active: showBarBackground && Config.options.bar.cornerStyle === 0 // Hug
+
+                        Behavior on width {
+                            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                        }
 
                         states: State {
                             name: "right"
@@ -162,7 +176,7 @@ Scope {
                         }
 
                         sourceComponent: Item {
-                            implicitHeight: Appearance.rounding.screenRounding
+                            implicitHeight: roundDecorators.width
                             RoundCorner {
                                 id: topCorner
                                 anchors {
@@ -171,7 +185,7 @@ Scope {
                                     top: parent.top
                                 }
 
-                                implicitSize: Appearance.rounding.screenRounding
+                                implicitSize: roundDecorators.width
                                 color: showBarBackground ? Appearance.colors.colLayer0 : "transparent"
 
                                 corner: RoundCorner.CornerEnum.TopLeft
@@ -190,7 +204,7 @@ Scope {
                                     left: !Config.options.bar.bottom ? parent.left : undefined
                                     right: Config.options.bar.bottom ? parent.right : undefined
                                 }
-                                implicitSize: Appearance.rounding.screenRounding
+                                implicitSize: roundDecorators.width
                                 color: showBarBackground ? Appearance.colors.colLayer0 : "transparent"
 
                                 corner: RoundCorner.CornerEnum.BottomLeft

@@ -60,11 +60,17 @@ Scope {
 
         onUnlocked: (targetAction) => {
             // Perform the target action if it's not just unlocking
-            if (targetAction == LockContext.ActionEnum.Poweroff) {
+            if (targetAction == LockContext.ActionEnum.Logout) {
+                Session.logout();
+                return;
+            } else if (targetAction == LockContext.ActionEnum.Poweroff) {
                 Session.poweroff();
                 return;
             } else if (targetAction == LockContext.ActionEnum.Reboot) {
                 Session.reboot();
+                return;
+            } else if (targetAction == LockContext.ActionEnum.RebootToFirmware) {
+                Session.rebootToFirmware();
                 return;
             }
 

@@ -1,3 +1,5 @@
+FORK: mostly targeted at getting a usable experience on a 2 in 1
+
 <div align="center">
     <h1>【 end_4's Hyprland dotfiles 】</h1>
     <h3></h3>

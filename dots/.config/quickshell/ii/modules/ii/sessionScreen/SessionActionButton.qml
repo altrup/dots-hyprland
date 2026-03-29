@@ -31,13 +31,13 @@ RippleButton {
     Keys.onPressed: (event) => {
         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
             keyboardDown = true
-            button.clicked()
             event.accepted = true;
         }
     }
     Keys.onReleased: (event) => {
         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
             keyboardDown = false
+            button.clicked()
             event.accepted = true;
         }
     }
