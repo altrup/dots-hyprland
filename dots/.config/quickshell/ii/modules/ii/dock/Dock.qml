@@ -12,7 +12,7 @@ import Quickshell.Widgets
 import Quickshell.Wayland
 import Quickshell.Hyprland
 
-Singleton {
+Scope {
     id: root
     property bool pinned: Config.options?.dock.pinnedOnStartup ?? false
 
@@ -33,7 +33,10 @@ Singleton {
             property var window: HyprlandData.activeWindow?.workspace?.id === currentWorkspaceID ? HyprlandData.activeWindow : biggestWindow
             property bool reveal: root.pinned || (Config.options?.dock.hoverToReveal && dockMouseArea.containsMouse) || dockApps.requestDockShow || !window
 
-            property var bar: Bar.barsMap[screen.name] ?? VerticalBar.barsMap[screen.name];
+            property var bar: {
+                void(GlobalStates.barUpdater);
+                return GlobalStates.bars[screen.name];
+            }
 
             anchors {
                 bottom: true
