@@ -32,6 +32,7 @@ Scope {
             property var biggestWindow: HyprlandData.biggestWindowForWorkspace(currentWorkspaceID)
             property var window: HyprlandData.activeWindow?.workspace?.id === currentWorkspaceID ? HyprlandData.activeWindow : biggestWindow
             property bool windowOrPanelOpen: GlobalStates.oskOpen || window
+            property bool completelyHidden: Config.options?.dock.hideWhenFullscreen && window?.fullscreen === 2 && !bar?.mustShow
             property bool reveal: root.pinned || (Config.options?.dock.hoverToReveal && dockMouseArea.containsMouse) || dockApps.requestDockShow || !windowOrPanelOpen
 
             property var bar: {
@@ -61,10 +62,10 @@ Scope {
             WlrLayershell.layer: WlrLayer.Overlay
             color: "transparent"
 
-            implicitHeight: (Config.options?.dock.height ?? 70) + Appearance.sizes.hyprlandGapsOut
+            implicitHeight: dockHoverRegion.height
 
             mask: Region {
-                item: dockMouseArea
+                item: hoverMaskRegion
             }
 
             MouseArea {
@@ -72,20 +73,38 @@ Scope {
                 height: parent.height
                 anchors {
                     top: parent.top
-                    topMargin: dockRoot.reveal ? 0 : (Config.options?.dock.hoverToReveal && (!Config.options?.dock.hideWhenFullscreen || window?.fullscreen !== 2 || bar?.mustShow)) ? (dockRoot.implicitHeight - Config.options.dock.hoverRegionHeight) : (dockRoot.implicitHeight + 1)
                     horizontalCenter: parent.horizontalCenter
                 }
                 implicitWidth: dockHoverRegion.implicitWidth + Appearance.sizes.elevationMargin * 2
                 hoverEnabled: true
 
-                Behavior on anchors.topMargin {
-                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                Item {
+                    id: hoverMaskRegion
+                    anchors {
+                        fill: dockHoverRegion
+                        topMargin: !dockRoot.reveal && Config.options?.dock.hoverToReveal && dockRoot.completelyHidden ? -(Config.options.dock.hoverRegionHeight + 1) : 0
+                    }
+
+                    Behavior on anchors.topMargin {
+                        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                    }
                 }
 
                 Item {
                     id: dockHoverRegion
-                    anchors.fill: parent
                     implicitWidth: dockBackground.implicitWidth
+                    implicitHeight: (Config.options?.dock.height ?? 70) + Appearance.sizes.hyprlandGapsOut
+
+                    anchors {
+                        right: parent.right
+                        left: parent.left
+                        top: parent.top
+                        topMargin: dockRoot.reveal ? 0 : (Config.options?.dock.hoverToReveal && !dockRoot.completelyHidden) ? (dockRoot.implicitHeight - Config.options.dock.hoverRegionHeight) : (dockRoot.implicitHeight + 1)
+                    }
+
+                    Behavior on anchors.topMargin {
+                        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                    }
 
                     Item { // Wrapper for the dock background
                         id: dockBackground
