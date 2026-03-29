@@ -10,9 +10,10 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 
-Scope {
+Singleton {
     id: bar
     property bool showBarBackground: Config.options.bar.showBackground
+    property var barsMap: ({}) // screen.name -> bar
 
     Variants {
         // For each monitor
@@ -78,9 +79,11 @@ Scope {
                 // Include in focus grab
                 Component.onCompleted: {
                     GlobalFocusGrab.addPersistent(barRoot);
+                    bar.barsMap[screen.name] = barRoot;
                 }
                 Component.onDestruction: {
                     GlobalFocusGrab.removePersistent(barRoot);
+                    delete bar.barsMap[screen.name];
                 }
 
                 MouseArea  {

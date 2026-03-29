@@ -12,7 +12,7 @@ import Quickshell.Widgets
 import Quickshell.Wayland
 import Quickshell.Hyprland
 
-Scope { // Scope
+Singleton {
     id: root
     property bool pinned: Config.options?.dock.pinnedOnStartup ?? false
 
@@ -32,6 +32,8 @@ Scope { // Scope
             property var biggestWindow: HyprlandData.biggestWindowForWorkspace(currentWorkspaceID)
             property var window: HyprlandData.activeWindow?.workspace?.id === currentWorkspaceID ? HyprlandData.activeWindow : biggestWindow
             property bool reveal: root.pinned || (Config.options?.dock.hoverToReveal && dockMouseArea.containsMouse) || dockApps.requestDockShow || !window
+
+            property var bar: Bar.barsMap[screen.name] ?? VerticalBar.barsMap[screen.name];
 
             anchors {
                 bottom: true
@@ -58,7 +60,7 @@ Scope { // Scope
                 height: parent.height
                 anchors {
                     top: parent.top
-                    topMargin: dockRoot.reveal ? 0 : (Config.options?.dock.hoverToReveal && window?.fullscreen !== 2) ? (dockRoot.implicitHeight - Config.options.dock.hoverRegionHeight) : (dockRoot.implicitHeight + 1)
+                    topMargin: dockRoot.reveal ? 0 : (Config.options?.dock.hoverToReveal && (!Config.options?.dock.hideWhenFullscreen || window?.fullscreen !== 2 || bar?.mustShow)) ? (dockRoot.implicitHeight - Config.options.dock.hoverRegionHeight) : (dockRoot.implicitHeight + 1)
                     horizontalCenter: parent.horizontalCenter
                 }
                 implicitWidth: dockHoverRegion.implicitWidth + Appearance.sizes.elevationMargin * 2
