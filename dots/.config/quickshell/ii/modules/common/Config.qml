@@ -14,11 +14,11 @@ Singleton {
     property int readWriteDelay: 50 // milliseconds
     property bool blockWrites: false
 
-    property string effectiveWallpaperPathSetting: Config.options.background.wallpaperPath ?? (
+    property string effectiveWallpaperPathSetting: Config.options.background.wallpaperPath.length > 0 ? Config.options.background.wallpaperPath : (
         Appearance.m3colors.darkmode ? Config.options.background.darkModeWallpaperPath : Config.options.background.lightModeWallpaperPath
     )
 
-    property string effectiveThumbnailPathSetting: Config.options.background.thumbnailPath ?? (
+    property string effectiveThumbnailPathSetting: Config.options.background.thumbnailPath.length > 0 ? Config.options.background.thumbnailPath : (
         Appearance.m3colors.darkmode ? Config.options.background.darkModeThumbnailPath : Config.options.background.lightModeThumbnailPath
     )
 
