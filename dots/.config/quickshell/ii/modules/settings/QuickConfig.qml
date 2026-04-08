@@ -74,7 +74,7 @@ ContentPage {
                     sourceSize.width: parent.implicitWidth
                     sourceSize.height: parent.implicitHeight
                     fillMode: Image.PreserveAspectCrop
-                    source: Config.options.background.wallpaperPath
+                    source: Config.effectiveWallpaperPathSetting
                     cache: false
                     layer.enabled: true
                     layer.effect: OpacityMask {

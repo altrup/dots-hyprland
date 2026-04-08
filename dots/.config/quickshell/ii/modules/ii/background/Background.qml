@@ -40,8 +40,8 @@ Variants {
         property int workspaceChunkSize: Config?.options.bar.workspaces.shown ?? 10
         property int totalWorkspaces: Math.ceil(lastWorkspaceId / workspaceChunkSize) * workspaceChunkSize
         // Wallpaper
-        property bool wallpaperIsVideo: Config.options.background.wallpaperPath.endsWith(".mp4") || Config.options.background.wallpaperPath.endsWith(".webm") || Config.options.background.wallpaperPath.endsWith(".mkv") || Config.options.background.wallpaperPath.endsWith(".avi") || Config.options.background.wallpaperPath.endsWith(".mov")
-        property string wallpaperPath: wallpaperIsVideo ? Config.options.background.thumbnailPath : Config.options.background.wallpaperPath
+        property bool wallpaperIsVideo: Config.effectiveWallpaperPathSetting.endsWith(".mp4") || Config.effectiveWallpaperPathSetting.endsWith(".webm") || Config.effectiveWallpaperPathSetting.endsWith(".mkv") || Config.effectiveWallpaperPathSetting.endsWith(".avi") || Config.effectiveWallpaperPathSetting.endsWith(".mov")
+        property string wallpaperPath: wallpaperIsVideo ? Config.effectiveThumbnailPathSetting : Config.effectiveWallpaperPathSetting
         property bool wallpaperSafetyTriggered: {
             const enabled = Config.options.workSafety.enable.wallpaper;
             const sensitiveWallpaper = (CF.StringUtils.stringListContainsSubstring(wallpaperPath.toLowerCase(), Config.options.workSafety.triggerCondition.fileKeywords));
