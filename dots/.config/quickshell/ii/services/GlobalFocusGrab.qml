@@ -11,6 +11,7 @@ import Quickshell.Hyprland
  */ 
 Singleton {
     id: root
+    property alias enabled: grab.active
 
     signal dismissed()
 
