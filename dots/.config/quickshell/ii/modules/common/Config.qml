@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.modules.common.functions
+import qs.modules.common
 
 Singleton {
     id: root
@@ -12,6 +13,14 @@ Singleton {
     property bool ready: false
     property int readWriteDelay: 50 // milliseconds
     property bool blockWrites: false
+
+    property string effectiveWallpaperPathSetting: Config.options.background.wallpaperPath ?? (
+        Appearance.m3colors.darkmode ? Config.options.background.darkModeWallpaperPath : Config.options.background.lightModeWallpaperPath
+    )
+
+    property string effectiveThumbnailPathSetting: Config.options.background.thumbnailPath ?? (
+        Appearance.m3colors.darkmode ? Config.options.background.darkModeThumbnailPath : Config.options.background.lightModeThumbnailPath
+    )
 
     function setNestedValue(nestedKey, value) {
         let keys = nestedKey.split(".");
@@ -211,7 +220,11 @@ Singleton {
                     }
                 }
                 property string wallpaperPath: ""
+                property string lightModeWallpaperPath: "" // only used if wallpaperPath is unset
+                property string darkModeWallpaperPath: "" // only used if wallpaperPath is unset
                 property string thumbnailPath: ""
+                property string lightModeThumbnailPath: "" // only used if thumbnailPath is unset
+                property string darkModeThumbnailPath: "" // only used if thumbnailPath is unset
                 property bool hideWhenFullscreen: true
                 property JsonObject parallax: JsonObject {
                     property bool vertical: false
