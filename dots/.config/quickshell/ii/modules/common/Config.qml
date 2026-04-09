@@ -16,14 +16,14 @@ Singleton {
     property bool blockWrites: false
 
     property string effectiveWallpaperPathSetting: Config.options.background.wallpaperPath.length > 0 ? Config.options.background.wallpaperPath : (
-        Hyprsunset.temperatureActive ? Config.options.background.nightLightWallpaperPath : (
-            Appearance.m3colors.darkmode ? Config.options.background.darkModeWallpaperPath : Config.options.background.lightModeWallpaperPath
+        !Appearance.m3colors.darkmode ? Config.options.background.lightModeWallpaperPath : (
+            Hyprsunset.temperatureActive ? Config.options.background.nightLightWallpaperPath : Config.options.background.darkModeWallpaperPath
         )
     )
 
     property string effectiveThumbnailPathSetting: Config.options.background.thumbnailPath.length > 0 ? Config.options.background.thumbnailPath : (
-        Hyprsunset.temperatureActive ? Config.options.background.nightLightThumbnailPath : (
-            Appearance.m3colors.darkmode ? Config.options.background.darkModeThumbnailPath : Config.options.background.lightModeThumbnailPath
+        !Appearance.m3colors.darkmode ? Config.options.background.lightModeThumbnailPath : (
+            Hyprsunset.temperatureActive ? Config.options.background.nightLightThumbnailPath : Config.options.background.darkModeThumbnailPath
         )
     )
 
