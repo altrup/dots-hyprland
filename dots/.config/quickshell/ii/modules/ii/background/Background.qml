@@ -195,8 +195,8 @@ Variants {
                     }
                 }
                 sourceSize {
-                    width: bgRoot.scaledWallpaperWidth
-                    height: bgRoot.scaledWallpaperHeight
+                    width: bgRoot.scaledWallpaperWidth * bgRoot.screen.devicePixelRatio
+                    height: bgRoot.scaledWallpaperHeight * bgRoot.screen.devicePixelRatio
                 }
                 width: bgRoot.scaledWallpaperWidth
                 height: bgRoot.scaledWallpaperHeight
