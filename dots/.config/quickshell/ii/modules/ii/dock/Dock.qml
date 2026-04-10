@@ -90,7 +90,7 @@ Scope {
                         right: parent.right
                         left: parent.left
                         top: parent.top
-                        topMargin: dockRoot.reveal ? 0 : (Config.options?.dock.hoverToReveal && !dockRoot.completelyHidden) ? (dockRoot.implicitHeight - Config.options.dock.hoverRegionHeight) : (dockRoot.implicitHeight + 1)
+                        topMargin: dockRoot.reveal ? 0 : (Config.options?.dock.hoverToReveal && !dockRoot.completelyHidden) ? (dockRoot.implicitHeight - Appearance.sizes.elevationMargin - Config.options.dock.hoverRegionHeight) : (dockRoot.implicitHeight + 1)
                     }
 
                     Behavior on anchors.topMargin {
