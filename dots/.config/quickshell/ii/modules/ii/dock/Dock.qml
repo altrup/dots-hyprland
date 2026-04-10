@@ -54,8 +54,8 @@ Scope {
                 GlobalFocusGrab.removePersistent(dockRoot);
             }
 
-            exclusiveZone: root.pinned ? implicitHeight : 0
-            exclusionMode: Config.options.bar.vertical || (root.pinned || !windowOrPanelOpen) ? ExclusionMode.Normal : ExclusionMode.Ignore
+            exclusiveZone: root.pinned ? implicitHeight - Appearance.sizes.elevationMargin : 0
+            exclusionMode: (root.pinned || !window) ? ExclusionMode.Normal : ExclusionMode.Ignore
 
             implicitWidth: dockBackground.implicitWidth
             WlrLayershell.namespace: "quickshell:dock"
@@ -93,13 +93,13 @@ Scope {
                 Item {
                     id: dockHoverRegion
                     implicitWidth: dockBackground.implicitWidth
-                    implicitHeight: (Config.options?.dock.height ?? 70) + Appearance.sizes.hyprlandGapsOut
+                    implicitHeight: (Config.options?.dock.height ?? 70) + Appearance.sizes.elevationMargin + Appearance.sizes.hyprlandGapsOut
 
                     anchors {
                         right: parent.right
                         left: parent.left
                         top: parent.top
-                        topMargin: dockRoot.reveal ? 0 : (Config.options?.dock.hoverToReveal && !dockRoot.completelyHidden) ? (dockRoot.implicitHeight - Config.options.dock.hoverRegionHeight) : (dockRoot.implicitHeight + 1)
+                        topMargin: dockRoot.reveal ? 0 : (Config.options?.dock.hoverToReveal && !dockRoot.completelyHidden) ? (dockRoot.implicitHeight - Appearance.sizes.elevationMargin - Config.options.dock.hoverRegionHeight) : (dockRoot.implicitHeight + 1)
                     }
 
                     Behavior on anchors.topMargin {
@@ -111,6 +111,7 @@ Scope {
                         anchors {
                             top: parent.top
                             bottom: parent.bottom
+                            topMargin: Appearance.sizes.elevationMargin
                             bottomMargin: Appearance.sizes.hyprlandGapsOut
                             horizontalCenter: parent.horizontalCenter
                         }
