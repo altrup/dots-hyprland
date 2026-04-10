@@ -180,7 +180,7 @@ Scope {
                             left: barContent.right
                             right: undefined
                         }
-                        width: mustShow || window?.fullscreen !== 2 || Config.options.appearance.fakeScreenRounding === 1 ? Appearance.rounding.screenRounding : 0
+                        width: mustShow || !barRoot.autoHideEnable ? Appearance.rounding.screenRounding : 0
                         active: showBarBackground && Config.options.bar.cornerStyle === 0 // Hug
 
                         Behavior on width {

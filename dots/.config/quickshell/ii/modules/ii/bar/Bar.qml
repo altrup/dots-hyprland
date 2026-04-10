@@ -188,7 +188,7 @@ Scope {
                             top: barContent.bottom
                             bottom: undefined
                         }
-                        height: mustShow || barRoot.window?.fullscreen !== 2 ? Appearance.rounding.screenRounding : 0
+                        height: mustShow || !barRoot.autoHideEnable ? Appearance.rounding.screenRounding : 0
                         active: showBarBackground && Config.options.bar.cornerStyle === 0 // Hug
 
                         Behavior on height {
