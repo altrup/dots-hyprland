@@ -100,7 +100,7 @@ Scope {
                     hoverEnabled: true
                     anchors.fill: parent
 
-                    layer.enabled: Config.options.bar.shadow
+                    layer.enabled: Config.options.bar.shadow && (!barRoot.autoHideEnable || mustShow)
                     layer.effect: MultiEffect {
                         shadowEnabled: true
                         shadowColor: Appearance.colors.colShadow
