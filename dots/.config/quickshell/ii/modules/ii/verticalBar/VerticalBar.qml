@@ -93,17 +93,13 @@ Scope {
                     GlobalFocusGrab.removePersistent(barRoot);
                 }
 
-                MouseArea  {
-                    id: hoverRegion
-                    hoverEnabled: true
-                    anchors.fill: parent
-
-                    layer.enabled: true
-                    layer.effect: MultiEffect {
-                        shadowEnabled: targetShadowEnabled || shadowDisableTimer.running
-                        shadowColor: Appearance.colors.colShadow
-                        shadowBlur: targetShadowEnabled ? 0.6 : 0
-                        shadowOpacity: targetShadowEnabled ? 1 : 0
+                MultiEffect {
+                    source: hoverRegion
+                    anchors.fill: hoverRegion
+                    shadowEnabled: targetShadowEnabled || shadowDisableTimer.running
+                    shadowColor: Appearance.colors.colShadow
+                    shadowBlur: targetShadowEnabled ? 0.6 : 0
+                    shadowOpacity: targetShadowEnabled ? 1 : 0
 
                         property bool targetShadowEnabled: Config.options.bar.shadow && (!barRoot.autoHideEnable || mustShow)
                         Timer {
@@ -115,13 +111,18 @@ Scope {
                             if (!targetShadowEnabled) { shadowDisableTimer.start(); }
                         }
 
-                        Behavior on shadowBlur {
-                            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-                        }
-                        Behavior on shadowOpacity {
-                            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-                        }
+                    Behavior on shadowBlur {
+                        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
                     }
+                    Behavior on shadowOpacity {
+                        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                    }
+                }
+
+                MouseArea  {
+                    id: hoverRegion
+                    hoverEnabled: true
+                    anchors.fill: parent
 
                     Item {
                         id: hoverMaskRegion
