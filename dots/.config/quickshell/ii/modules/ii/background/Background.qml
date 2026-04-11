@@ -96,6 +96,17 @@ Variants {
             // Clock position gets updated after zoom scale is updated
         }
 
+        Connections {
+            target: bgRoot.screen
+
+            onWidthChanged: {
+                bgRoot.updateZoomScale();
+            }
+            onHeightChanged: {
+                bgRoot.updateZoomScale();
+            }
+        }
+
         // Wallpaper zoom scale
         function updateZoomScale() {
             getWallpaperSizeProc.path = bgRoot.wallpaperPath;
