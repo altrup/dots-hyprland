@@ -129,15 +129,15 @@ Scope {
                     maskSpreadAtMin: 0.1
                     maskThresholdMax: 1.0
 
-                        property bool targetShadowEnabled: Config.options.bar.shadow && (!barRoot.autoHideEnable || mustShow)
-                        Timer {
-                            id: shadowDisableTimer
-                            interval: Appearance.animation.elementMoveFast.duration
-                            repeat: false
-                        }
-                        onTargetShadowEnabledChanged: {
-                            if (!targetShadowEnabled) { shadowDisableTimer.start(); }
-                        }
+                    property bool targetShadowEnabled: Config.options.bar.shadow && (!barRoot.autoHideEnable || mustShow)
+                    Timer {
+                        id: shadowDisableTimer
+                        interval: Appearance.animation.elementMoveFast.duration
+                        repeat: false
+                    }
+                    onTargetShadowEnabledChanged: {
+                        if (!targetShadowEnabled) { shadowDisableTimer.start(); }
+                    }
 
                     Behavior on shadowBlur {
                         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
