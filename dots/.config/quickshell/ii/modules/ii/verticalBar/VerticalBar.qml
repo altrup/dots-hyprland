@@ -95,23 +95,49 @@ Scope {
                     GlobalStates.removeBar(screen.name);
                 }
 
+                ShaderEffectSource {
+                    id: barSource
+                    property real padding: 10 // extra space for shadow
+                    anchors {
+                        fill: hoverRegion
+                        margins: -padding
+                    }
+                    sourceItem: hoverRegion
+                    sourceRect: Qt.rect(
+                        -padding,
+                        -padding,
+                        hoverRegion.width + padding * 2,
+                        hoverRegion.height + padding * 2
+                    )
+                    samples: 4
+                    visible: false
+                }
+
                 MultiEffect {
-                    source: hoverRegion
-                    anchors.fill: hoverRegion
+                    source: barSource
+                    anchors.fill: barSource
                     shadowEnabled: targetShadowEnabled || shadowDisableTimer.running
                     shadowColor: Appearance.colors.colShadow
                     shadowBlur: targetShadowEnabled ? 0.6 : 0
                     shadowOpacity: targetShadowEnabled ? 1 : 0
+                    autoPaddingEnabled: false
 
-                        property bool targetShadowEnabled: Config.options.bar.shadow && (!barRoot.autoHideEnable || mustShow)
-                        Timer {
-                            id: shadowDisableTimer
-                            interval: Appearance.animation.elementMoveFast.duration
-                            repeat: false
-                        }
-                        onTargetShadowEnabledChanged: {
-                            if (!targetShadowEnabled) { shadowDisableTimer.start(); }
-                        }
+                    maskEnabled: true
+                    maskSource: barSource
+                    maskInverted: true
+                    maskThresholdMin: 0.1
+                    maskSpreadAtMin: 0.1
+                    maskThresholdMax: 1.0
+
+                    property bool targetShadowEnabled: Config.options.bar.shadow && (!barRoot.autoHideEnable || mustShow)
+                    Timer {
+                        id: shadowDisableTimer
+                        interval: Appearance.animation.elementMoveFast.duration
+                        repeat: false
+                    }
+                    onTargetShadowEnabledChanged: {
+                        if (!targetShadowEnabled) { shadowDisableTimer.start(); }
+                    }
 
                     Behavior on shadowBlur {
                         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
