@@ -19,6 +19,7 @@ Button {
     property var releaseAction // When left clicking (release)
     property var altAction // When right clicking
     property var middleClickAction // When middle clicking
+    property bool overrideDown: root.down // used with dragging
     property bool bounce: true
     property real baseWidth: contentItem.implicitWidth + horizontalPadding * 2
     property real baseHeight: contentItem.implicitHeight + verticalPadding * 2
@@ -33,8 +34,8 @@ Button {
 
     Layout.fillWidth: (clickIndex - 1 <= indexInParent && indexInParent <= clickIndex + 1)
     Layout.fillHeight: (clickIndex - 1 <= indexInParent && indexInParent <= clickIndex + 1)
-    implicitWidth: (root.down && bounce) ? clickedWidth : baseWidth
-    implicitHeight: (root.down && bounce) ? clickedHeight : baseHeight
+    implicitWidth: (root.overrideDown && bounce) ? clickedWidth : baseWidth
+    implicitHeight: (root.overrideDown && bounce) ? clickedHeight : baseHeight
 
     property color colBackground: ColorUtils.transparentize(colBackgroundHover, 1) || "transparent"
     property color colBackgroundHover: Appearance?.colors.colLayer1Hover ?? "#E5DFED"
@@ -43,19 +44,19 @@ Button {
     property color colBackgroundToggledHover: Appearance?.colors.colPrimaryHover ?? "#77699C"
     property color colBackgroundToggledActive: Appearance?.colors.colPrimaryActive ?? "#D6CEE2"
 
-    property real radius: root.down ? root.buttonRadiusPressed : root.buttonRadius
-    property real leftRadius: root.down ? root.buttonRadiusPressed : root.buttonRadius
-    property real rightRadius: root.down ? root.buttonRadiusPressed : root.buttonRadius
+    property real radius: root.overrideDown ? root.buttonRadiusPressed : root.buttonRadius
+    property real leftRadius: root.overrideDown ? root.buttonRadiusPressed : root.buttonRadius
+    property real rightRadius: root.overrideDown ? root.buttonRadiusPressed : root.buttonRadius
     property color color: root.enabled ? (root.toggled ? 
-        (root.down ? colBackgroundToggledActive : 
+        (root.overrideDown ? colBackgroundToggledActive : 
             root.hovered ? colBackgroundToggledHover : 
             colBackgroundToggled) :
-        (root.down ? colBackgroundActive : 
+        (root.overrideDown ? colBackgroundActive : 
             root.hovered ? colBackgroundHover : 
             colBackground)) : colBackground
 
-    onDownChanged: {
-        if (root.down) {
+    onOverrideDownChanged: {
+        if (root.overrideDown) {
             if (root.parent.clickIndex !== undefined) {
                 root.parent.clickIndex = parent.children.indexOf(root)
             }
