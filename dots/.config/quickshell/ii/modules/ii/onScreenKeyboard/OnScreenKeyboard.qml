@@ -14,7 +14,8 @@ pragma ComponentBehavior: Bound
 Scope { // Scope
     id: root
     property bool pinned: Config.options?.osk.pinnedOnStartup ?? false
-    property real maxHeight: oskContent.height + 2 * Appearance.sizes.elevationMargin
+    // we store screenHeight because Screen.height doesn't take exclusiveZones into effect
+    property real screenHeight: oskContent.height + 2 * Appearance.sizes.elevationMargin
 
     Loader {
         id: oskLoader
@@ -41,17 +42,9 @@ Scope { // Scope
             }
             exclusiveZone: root.pinned ? oskContent.height + 2 * Appearance.sizes.elevationMargin - Appearance.sizes.hyprlandGapsOut : 0
             onHeightChanged: {
-                root.maxHeight = Math.max(root.maxHeight, oskRoot.height);
+                if (!root.pinned) screenHeight = oskRoot.height;
             }
-            Connections {
-                target: oskRoot.screen
-
-                function onHeightChanged() {
-                    // reset maxHeight if screen size changedi
-                    root.maxHeight = oskContent.height + 2 * Appearance.sizes.elevationMargin;
-                }
-            }
-            implicitHeight: root.maxHeight
+            implicitHeight: root.screenHeight
             WlrLayershell.namespace: "quickshell:osk"
             WlrLayershell.layer: WlrLayer.Overlay
             // Hyprland 0.49: Focus is always exclusive and setting this breaks mouse focus grab
