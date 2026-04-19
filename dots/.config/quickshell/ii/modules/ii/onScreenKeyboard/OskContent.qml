@@ -12,7 +12,7 @@ Rectangle {
     signal pinRequested(bool pinned)
 
     property real targetX: (root.parent.width - root.width) / 2
-    property real targetY: Appearance.sizes.elevationMargin // from bottom of screen
+    property real targetY: 0 // from bottom of screen
 
     property bool dragging: false
 
@@ -26,18 +26,21 @@ Rectangle {
     property real maxX: root.parent.width - root.width
     property real snapOffsetX: lastSnappedEdgeX === "left" ? -targetX * snapResistanceX : 
         lastSnappedEdgeX === "right" ? (maxX - targetX) * snapResistanceX : 0
-    onTargetXChanged: {
-        if (!dragging) return;
-
+    function updateSnapOffsetX() {
         if (snappedEdgeX === "") {
-            if (targetX < snapDistance) snappedEdgeX = "left"
-            else if (targetX > maxX - snapDistance) snappedEdgeX = "right"
+            if (targetX < snapDistance) {
+                snappedEdgeX = "left";
+            } else if (targetX > maxX - snapDistance) {
+                snappedEdgeX = "right";
+            }
         } else if (snappedEdgeX === "left" && targetX > releaseDistance) {
             snappedEdgeX = "";
         } else if (snappedEdgeX === "right" && (maxX - targetX) > releaseDistance) {
             snappedEdgeX = "";
         }
     }
+    onTargetXChanged: if (dragging) updateSnapOffsetX()
+    onMaxXChanged: if (root.pinned) updateSnapOffsetX()
     onSnappedEdgeXChanged: {
         if (snappedEdgeX !== "") lastSnappedEdgeX = snappedEdgeX
     }
@@ -45,24 +48,28 @@ Rectangle {
         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
     }
 
-    property string snappedEdgeY: ""  // "", "top", "bottom"
-    property string lastSnappedEdgeY: ""
+    property string snappedEdgeY: "bottom"  // "", "top", "bottom"
+    property string lastSnappedEdgeY: "bottom"
     property real snapResistanceY: snappedEdgeY === "" ? 0 : (dragging ? snapResistance : 1)  
     property real maxY: root.parent.height - root.height
     property real snapOffsetY: lastSnappedEdgeY === "bottom" ? -targetY * snapResistanceY : 
         lastSnappedEdgeY === "top" ? (maxY - targetY) * snapResistanceY : 0
-    onTargetYChanged: {
-        if (!dragging) return;
-
+    function updateSnapOffsetY() {
         if (snappedEdgeY === "") {
-            if (targetY < snapDistance) snappedEdgeY = "bottom"  // close to bottom
-            else if (targetY > maxY - snapDistance) snappedEdgeY = "top"  // close to top
+            if (targetY < snapDistance) {
+                snappedEdgeY = "bottom"; // close to bottom
+            } else if (targetY > maxY - snapDistance) {
+                snappedEdgeY = "top";
+            }
         } else if (snappedEdgeY === "bottom" && targetY > releaseDistance) {
-            snappedEdgeY = ""
+            snappedEdgeY = "";
+            if (root.pinned) root.pinRequested(false);
         } else if (snappedEdgeY === "top" && (maxY - targetY) > releaseDistance) {
-            snappedEdgeY = ""
+            snappedEdgeY = "";
         }
     }
+    onTargetYChanged: if (dragging) updateSnapOffsetY()
+    onMaxYChanged: if (root.pinned) updateSnapOffsetY()
     onSnappedEdgeYChanged: {
         if (snappedEdgeY !== "") lastSnappedEdgeY = snappedEdgeY
     }
@@ -157,6 +164,9 @@ Rectangle {
                 OskControlButton { // Pin button
                     toggled: root.pinned
                     downAction: () => {
+                        if (!root.pinned) {
+                            root.snappedEdgeY = "bottom";
+                        }
                         root.pinRequested(!root.pinned);
                     }
                     contentItem: MaterialSymbol {

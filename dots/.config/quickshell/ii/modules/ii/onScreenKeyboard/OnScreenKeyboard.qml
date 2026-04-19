@@ -37,8 +37,12 @@ Scope { // Scope
             function hide() {
                 GlobalStates.oskOpen = false
             }
-            exclusiveZone: root.pinned ? implicitHeight + Appearance.sizes.hyprlandGapsOut : 0
-            implicitHeight: oskContent.height + Appearance.sizes.elevationMargin
+            exclusiveZone: root.pinned ? oskContent.height + Appearance.sizes.elevationMargin + Appearance.sizes.hyprlandGapsOut : 0
+            property real maxHeight: 0
+            onHeightChanged: {
+                maxHeight = Math.max(maxHeight, height);
+            }
+            implicitHeight: maxHeight
             WlrLayershell.namespace: "quickshell:osk"
             WlrLayershell.layer: WlrLayer.Overlay
             // Hyprland 0.49: Focus is always exclusive and setting this breaks mouse focus grab
