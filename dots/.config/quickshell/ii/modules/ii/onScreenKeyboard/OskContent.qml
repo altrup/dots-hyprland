@@ -3,6 +3,7 @@ import qs.modules.common.widgets
 import "layouts.js" as Layouts
 import QtQuick
 import QtQuick.Layouts
+pragma ComponentBehavior: Bound
 
 Rectangle {
     id: root
@@ -16,15 +17,17 @@ Rectangle {
 
     property bool dragging: false
 
-    property real snapDistance: 40
-    property real releaseDistance: 60
+    property real maxX: root.parent.width - root.width
+    property real maxY: root.parent.height - root.height
+    property real snapDistance: 0.1 * Math.min(maxX, maxY)
+    property real releaseDistance: 1.5 * snapDistance
     property real snapResistance: 0.75
 
     component SnapEdge: Item {
         required property real coordinate
         required property real edgeCoordinate
         // lowerSide: true if snapping towards x < snapCoordinate, false if snapping towards x > snapCoordinate
-        required property bool lowerSide
+        required property string side // which side to snap to: "lower", "center", "upper" 
         required property bool enabled
 
         property bool snapped: false
@@ -36,58 +39,69 @@ Rectangle {
                 return;
             }
 
-            if (!snapped && ((lowerSide ? 1 : -1) * (coordinate - edgeCoordinate) < root.snapDistance)) {
+            if (!snapped && (
+                side === "center" ? Math.abs(coordinate - edgeCoordinate) < root.snapDistance :
+                (side === "lower" ? 1 : -1) * (coordinate - edgeCoordinate) < root.snapDistance
+            )) {
                 snapped = true;
-            } else if (snapped && ((lowerSide ? 1 : -1) * (coordinate - edgeCoordinate) > root.releaseDistance)) {
+            } else if (snapped && (
+                side === "center" ? Math.abs(coordinate - edgeCoordinate) > root.releaseDistance :
+                (side === "lower" ? 1 : -1) * (coordinate - edgeCoordinate) > root.releaseDistance
+            )) {
                 snapped = false;
             }
         }
         onCoordinateChanged: updateSnapOffset()
         onEdgeCoordinateChanged: updateSnapOffset()
-        onLowerSideChanged: updateSnapOffset()
+        onSideChanged: updateSnapOffset()
         onEnabledChanged: updateSnapOffset()
         Behavior on snapResistance {
             animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
         }
     }
 
-    property real maxX: root.parent.width - root.width
     SnapEdge {
         id: leftEdge
-        enabled: root.parent.width > 0 && root.width > 0
-        coordinate: targetX
+        enabled: root.parent.width > 0 && root.width > 0 && !verticalCenter.snapped
+        coordinate: root.targetX
         edgeCoordinate: 0
-        lowerSide: true
+        side: "lower"
+    }
+    SnapEdge {
+        id: verticalCenter
+        enabled: root.parent.width > 0 && root.width > 0
+        coordinate: root.targetX
+        edgeCoordinate: root.maxX/2
+        side: "center"
     }
     SnapEdge {
         id: rightEdge
-        enabled: root.parent.width > 0 && root.width > 0 && !(leftEdge.enabled && leftEdge.snapped)
-        coordinate: targetX
-        edgeCoordinate: maxX
-        lowerSide: false
+        enabled: root.parent.width > 0 && root.width > 0 && !leftEdge.snapped && !verticalCenter.snapped
+        coordinate: root.targetX
+        edgeCoordinate: root.maxX
+        side: "upper"
     }
 
-    property real maxY: root.parent.height - root.height
     SnapEdge {
         id: topEdge
         enabled: root.parent.height > 0 && root.height > 0
-        coordinate: targetY
+        coordinate: root.targetY
         edgeCoordinate: 0
-        lowerSide: true
+        side: "lower"
     }
     SnapEdge {
         id: bottomEdge
         enabled: root.parent.height > 0 && root.height > 0 && !(topEdge.enabled && topEdge.snapped)
-        coordinate: targetY
-        edgeCoordinate: maxY
-        lowerSide: false
+        coordinate: root.targetY
+        edgeCoordinate: root.maxY
+        side: "upper"
 
         onSnappedChanged: {
             if (!snapped && root.pinned && root.dragging) root.pinRequested(false);
         }
     }
 
-    x: targetX + leftEdge.snapOffset + rightEdge.snapOffset
+    x: targetX + leftEdge.snapOffset + verticalCenter.snapOffset + rightEdge.snapOffset
     y: targetY + topEdge.snapOffset + bottomEdge.snapOffset
 
     property int maxWidth: {
