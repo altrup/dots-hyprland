@@ -31,8 +31,9 @@ Scope {
             property var currentWorkspaceID: hyprlandDataMonitor?.specialWorkspace.id || hyprlandDataMonitor?.activeWorkspace.id
             property var biggestWindow: HyprlandData.biggestWindowForWorkspace(currentWorkspaceID)
             property var window: HyprlandData.activeWindow?.workspace?.id === currentWorkspaceID ? HyprlandData.activeWindow : biggestWindow
+            property bool windowOrPanelOpen: GlobalStates.oskOpen || window
             property bool completelyHidden: Config.options?.dock.hideWhenFullscreen && window?.fullscreen === 2 && !bar?.mustShow
-            property bool reveal: root.pinned || (Config.options?.dock.hoverToReveal && dockMouseArea.containsMouse) || dockApps.requestDockShow || !window
+            property bool reveal: root.pinned || (Config.options?.dock.hoverToReveal && dockMouseArea.containsMouse) || dockApps.requestDockShow || !windowOrPanelOpen
 
             property var bar: {
                 void(GlobalStates.barUpdater);
@@ -46,7 +47,7 @@ Scope {
             }
 
             exclusiveZone: root.pinned ? implicitHeight - Appearance.sizes.elevationMargin : 0
-            exclusionMode: (root.pinned || !window) ? ExclusionMode.Normal : ExclusionMode.Ignore
+            exclusionMode: (root.pinned || !windowOrPanelOpen) ? ExclusionMode.Normal : ExclusionMode.Ignore
 
             implicitWidth: dockBackground.implicitWidth
             WlrLayershell.namespace: "quickshell:dock"
