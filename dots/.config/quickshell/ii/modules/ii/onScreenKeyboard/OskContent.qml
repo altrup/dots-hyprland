@@ -83,7 +83,7 @@ Rectangle {
         lowerSide: false
 
         onSnappedChanged: {
-            if (!snapped && root.pinned) root.pinRequested(false);
+            if (!snapped && root.pinned && root.dragging) root.pinRequested(false);
         }
     }
 
