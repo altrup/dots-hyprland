@@ -13,7 +13,7 @@ Rectangle {
     signal pinRequested(bool pinned)
 
     property real targetX: (root.parent.width - root.width) / 2
-    property real targetY: 0 // from bottom of screen
+    property real targetY: (root.parent.height - root.height)
 
     property bool dragging: false
 
@@ -21,66 +21,75 @@ Rectangle {
     property real releaseDistance: 60
     property real snapResistance: 0.75
 
-    property string snappedEdgeX: ""  // "", "left", "right"
-    property string lastSnappedEdgeX: ""
-    property real snapResistanceX: snappedEdgeX === "" ? 0 : (dragging ? snapResistance : 1)  
+    component SnapEdge: Item {
+        required property real coordinate
+        required property real edgeCoordinate
+        // lowerSide: true if snapping towards x < snapCoordinate, false if snapping towards x > snapCoordinate
+        required property bool lowerSide
+        required property bool enabled
+
+        property bool snapped: false
+        property real snapResistance: !snapped ? 0 : (root.dragging ? root.snapResistance : 1)
+        property real snapOffset: (edgeCoordinate - coordinate) * snapResistance
+        function updateSnapOffset() {
+            if (!enabled) {
+                snapped = false;
+                return;
+            }
+
+            if (!snapped && ((lowerSide ? 1 : -1) * (coordinate - edgeCoordinate) < root.snapDistance)) {
+                snapped = true;
+            } else if (snapped && ((lowerSide ? 1 : -1) * (coordinate - edgeCoordinate) > root.releaseDistance)) {
+                snapped = false;
+            }
+        }
+        onCoordinateChanged: updateSnapOffset()
+        onEdgeCoordinateChanged: updateSnapOffset()
+        onLowerSideChanged: updateSnapOffset()
+        onEnabledChanged: updateSnapOffset()
+        Behavior on snapResistance {
+            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+        }
+    }
+
     property real maxX: root.parent.width - root.width
-    property real snapOffsetX: lastSnappedEdgeX === "left" ? -targetX * snapResistanceX : 
-        lastSnappedEdgeX === "right" ? (maxX - targetX) * snapResistanceX : 0
-    function updateSnapOffsetX() {
-        if (snappedEdgeX === "") {
-            if (targetX < snapDistance) {
-                snappedEdgeX = "left";
-            } else if (targetX > maxX - snapDistance) {
-                snappedEdgeX = "right";
-            }
-        } else if (snappedEdgeX === "left" && targetX > releaseDistance) {
-            snappedEdgeX = "";
-        } else if (snappedEdgeX === "right" && (maxX - targetX) > releaseDistance) {
-            snappedEdgeX = "";
-        }
+    SnapEdge {
+        id: leftEdge
+        enabled: root.parent.width > 0 && root.width > 0
+        coordinate: targetX
+        edgeCoordinate: 0
+        lowerSide: true
     }
-    onTargetXChanged: if (root.parent.width > 0 && root.width > 0) updateSnapOffsetX()
-    onMaxXChanged: if (root.parent.width > 0 && root.width > 0) updateSnapOffsetX()
-    onSnappedEdgeXChanged: {
-        if (snappedEdgeX !== "") lastSnappedEdgeX = snappedEdgeX
-    }
-    Behavior on snapResistanceX {
-        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+    SnapEdge {
+        id: rightEdge
+        enabled: root.parent.width > 0 && root.width > 0 && !(leftEdge.enabled && leftEdge.snapped)
+        coordinate: targetX
+        edgeCoordinate: maxX
+        lowerSide: false
     }
 
-    property string snappedEdgeY: "bottom"  // "", "top", "bottom"
-    property string lastSnappedEdgeY: "bottom"
-    property real snapResistanceY: snappedEdgeY === "" ? 0 : (dragging ? snapResistance : 1)  
     property real maxY: root.parent.height - root.height
-    property real snapOffsetY: lastSnappedEdgeY === "bottom" ? -targetY * snapResistanceY : 
-        lastSnappedEdgeY === "top" ? (maxY - targetY) * snapResistanceY : 0
-    function updateSnapOffsetY() {
-        if (snappedEdgeY === "") {
-            if (targetY < snapDistance) {
-                snappedEdgeY = "bottom"; // close to bottom
-            } else if (targetY > maxY - snapDistance) {
-                snappedEdgeY = "top";
-            }
-        } else if (snappedEdgeY === "bottom" && targetY > releaseDistance) {
-            snappedEdgeY = "";
-            if (root.pinned) root.pinRequested(false);
-        } else if (snappedEdgeY === "top" && (maxY - targetY) > releaseDistance) {
-            snappedEdgeY = "";
+    SnapEdge {
+        id: topEdge
+        enabled: root.parent.height > 0 && root.height > 0
+        coordinate: targetY
+        edgeCoordinate: 0
+        lowerSide: true
+    }
+    SnapEdge {
+        id: bottomEdge
+        enabled: root.parent.height > 0 && root.height > 0 && !(topEdge.enabled && topEdge.snapped)
+        coordinate: targetY
+        edgeCoordinate: maxY
+        lowerSide: false
+
+        onSnappedChanged: {
+            if (!snapped && root.pinned) root.pinRequested(false);
         }
     }
-    onTargetYChanged: if (root.parent.height > 0 && root.height > 0) updateSnapOffsetY()
-    onMaxYChanged: if (root.parent.height > 0 && root.height > 0) updateSnapOffsetY()
-    onSnappedEdgeYChanged: {
-        if (snappedEdgeY !== "") lastSnappedEdgeY = snappedEdgeY
-    }
-    Behavior on snapResistanceY {
-        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-    }
 
-    x: targetX + snapOffsetX
-    // note that we do y from the bottom to fix animation issues when pinning
-    y: root.parent.height - root.height - (targetY + snapOffsetY)
+    x: targetX + leftEdge.snapOffset + rightEdge.snapOffset
+    y: targetY + topEdge.snapOffset + bottomEdge.snapOffset
 
     property int maxWidth: {
         return Math.max(Screen.width, Screen.height) * Config.options.osk.maxWidthFraction
@@ -137,7 +146,7 @@ Rectangle {
             if (!active) return;
             
             root.targetX = rootXAtPress + centroid.scenePosition.x - centroid.scenePressPosition.x;
-            root.targetY = root.parent.height - root.height - (rootYAtPress + centroid.scenePosition.y - centroid.scenePressPosition.y);
+            root.targetY = rootYAtPress + centroid.scenePosition.y - centroid.scenePressPosition.y;
         }
     }
 
@@ -167,7 +176,8 @@ Rectangle {
                     toggled: root.pinned
                     downAction: () => {
                         if (!root.pinned) {
-                            root.snappedEdgeY = "bottom";
+                            topEdge.snapped = false;
+                            bottomEdge.snapped = true;
                         }
                         root.pinRequested(!root.pinned);
                     }
