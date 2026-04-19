@@ -17,11 +17,9 @@ Rectangle {
 
     property bool dragging: false
 
-    property real maxX: root.parent.width - root.width
-    property real maxY: root.parent.height - root.height
-    property real snapDistance: 0.1 * Math.min(maxX, maxY)
+    property real snapDistance: 0.03 * Math.min(root.parent.width, root.parent.height)
     property real releaseDistance: 1.5 * snapDistance
-    property real snapResistance: 0.75
+    property real snapResistance: 0.8
 
     component SnapEdge: Item {
         required property real coordinate
@@ -60,6 +58,7 @@ Rectangle {
         }
     }
 
+    property real maxX: root.parent.width - root.width
     SnapEdge {
         id: leftEdge
         enabled: root.parent.width > 0 && root.width > 0 && !verticalCenter.snapped
@@ -82,6 +81,7 @@ Rectangle {
         side: "upper"
     }
 
+    property real maxY: root.parent.height - root.height
     SnapEdge {
         id: topEdge
         enabled: root.parent.height > 0 && root.height > 0
@@ -205,7 +205,7 @@ Rectangle {
                 }
                 OskControlButton {
                     visible: root.allowDragging
-                    overrideDown: buttonDragHandler.active || down
+                    overrideDown: buttonDragHandler.active || leftBarDragHandler.active || down
 
                     mouseArea.cursorShape: Qt.SizeAllCursor
                     contentItem: MaterialSymbol {
@@ -237,6 +237,7 @@ Rectangle {
             }
 
             OskDragHandler {
+                id: leftBarDragHandler
                 grabPermissions: PointerHandler.CanTakeOverFromHandlersOfDifferentType | PointerHandler.ApprovesTakeOverByAnything
             }
         }
