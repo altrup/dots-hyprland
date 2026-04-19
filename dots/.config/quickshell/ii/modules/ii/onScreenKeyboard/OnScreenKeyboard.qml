@@ -64,7 +64,7 @@ Scope { // Scope
             Item {
                 anchors {
                     fill: parent
-                    bottomMargin: root.pinned ? Appearance.sizes.elevationMargin : 0
+                    margins: Appearance.sizes.elevationMargin
                 }
 
                 OskContent {

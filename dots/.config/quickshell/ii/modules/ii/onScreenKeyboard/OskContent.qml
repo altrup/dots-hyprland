@@ -11,12 +11,64 @@ Rectangle {
     signal hideRequested()
     signal pinRequested(bool pinned)
 
-    property real baseX: (root.parent.width - root.width) / 2
-    property real baseY: Appearance.sizes.elevationMargin
-    property real targetX: baseX
-    property real targetY: baseY // from bottom of screen
-    x: Math.max(0, Math.min(root.parent.width - root.width, targetX))
-    y: Math.max(0, Math.min(root.parent.height - root.height, root.parent.height - root.height - targetY))
+    property real targetX: (root.parent.width - root.width) / 2
+    property real targetY: Appearance.sizes.elevationMargin // from bottom of screen
+
+    property bool dragging: false
+
+    property real snapDistance: 40
+    property real releaseDistance: 60
+    property real snapResistance: 0.75
+
+    property string snappedEdgeX: ""  // "", "left", "right"
+    property string lastSnappedEdgeX: ""
+    property real snapResistanceX: snappedEdgeX === "" ? 0 : (dragging ? snapResistance : 1)  
+    property real maxX: root.parent.width - root.width
+    property real snapOffsetX: lastSnappedEdgeX === "left" ? -targetX * snapResistanceX : 
+        lastSnappedEdgeX === "right" ? (maxX - targetX) * snapResistanceX : 0
+    onTargetXChanged: {
+        if (snappedEdgeX === "") {
+            if (targetX < snapDistance) snappedEdgeX = "left"
+            else if (targetX > maxX - snapDistance) snappedEdgeX = "right"
+        } else if (snappedEdgeX === "left" && targetX > releaseDistance) {
+            snappedEdgeX = "";
+        } else if (snappedEdgeX === "right" && (maxX - targetX) > releaseDistance) {
+            snappedEdgeX = "";
+        }
+    }
+    onSnappedEdgeXChanged: {
+        if (snappedEdgeX !== "") lastSnappedEdgeX = snappedEdgeX
+    }
+    Behavior on snapResistanceX {
+        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+    }
+
+    property string snappedEdgeY: ""  // "", "top", "bottom"
+    property string lastSnappedEdgeY: ""
+    property real snapResistanceY: snappedEdgeY === "" ? 0 : (dragging ? snapResistance : 1)  
+    property real maxY: root.parent.height - root.height
+    property real snapOffsetY: lastSnappedEdgeY === "bottom" ? -targetY * snapResistanceY : 
+        lastSnappedEdgeY === "top" ? (maxY - targetY) * snapResistanceY : 0
+    onTargetYChanged: {
+        if (snappedEdgeY === "") {
+            if (targetY < snapDistance) snappedEdgeY = "bottom"  // close to bottom
+            else if (targetY > maxY - snapDistance) snappedEdgeY = "top"  // close to top
+        } else if (snappedEdgeY === "bottom" && targetY > releaseDistance) {
+            snappedEdgeY = ""
+        } else if (snappedEdgeY === "top" && (maxY - targetY) > releaseDistance) {
+            snappedEdgeY = ""
+        }
+    }
+    onSnappedEdgeYChanged: {
+        if (snappedEdgeY !== "") lastSnappedEdgeY = snappedEdgeY
+    }
+    Behavior on snapResistanceY {
+        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+    }
+
+    x: targetX + snapOffsetX
+    // note that we do y from the bottom to fix animation issues when pinning
+    y: root.parent.height - root.height - (targetY + snapOffsetY)
 
     property int maxWidth: {
         return Math.max(Screen.width, Screen.height) * Config.options.osk.maxWidthFraction
@@ -63,9 +115,10 @@ Rectangle {
 
         onActiveChanged: {
             if (active) {
-                rootXAtPress = root.x
-                rootYAtPress = root.y
+                rootXAtPress = root.x;
+                rootYAtPress = root.y;
             }
+            root.dragging = active;
         }
 
         onCentroidChanged: {
