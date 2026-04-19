@@ -17,7 +17,7 @@ Rectangle {
 
     property bool dragging: false
 
-    property real snapDistance: 0.03 * Math.min(root.parent.width, root.parent.height)
+    property real snapDistance: 0.015 * Math.min(root.parent.width, root.parent.height)
     property real releaseDistance: 1.5 * snapDistance
     property real snapResistance: 0.8
 
@@ -142,6 +142,7 @@ Rectangle {
     component OskDragHandler: DragHandler {
         target: null
         enabled: root.allowDragging
+        dragThreshold: 0
         acceptedButtons: Qt.LeftButton | Qt.RightButton
 
         property real rootXAtPress: 0
@@ -205,7 +206,7 @@ Rectangle {
                 }
                 OskControlButton {
                     visible: root.allowDragging
-                    overrideDown: buttonDragHandler.active || leftBarDragHandler.active || down
+                    overrideDown: buttonDragHandler.active || leftBarDragHandler.active || pressHandler.pressed || down
 
                     mouseArea.cursorShape: Qt.SizeAllCursor
                     contentItem: MaterialSymbol {
@@ -236,6 +237,10 @@ Rectangle {
                 }
             }
 
+            TapHandler {
+                id: pressHandler
+                acceptedButtons: leftBarDragHandler.acceptedButtons
+            }
             OskDragHandler {
                 id: leftBarDragHandler
                 grabPermissions: PointerHandler.CanTakeOverFromHandlersOfDifferentType | PointerHandler.ApprovesTakeOverByAnything
