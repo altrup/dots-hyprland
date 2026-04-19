@@ -40,8 +40,8 @@ Rectangle {
             snappedEdgeX = "";
         }
     }
-    onTargetXChanged: if (dragging) updateSnapOffsetX()
-    onMaxXChanged: if (root.pinned) updateSnapOffsetX()
+    onTargetXChanged: if (root.parent.width > 0 && root.width > 0) updateSnapOffsetX()
+    onMaxXChanged: if (root.parent.width > 0 && root.width > 0) updateSnapOffsetX()
     onSnappedEdgeXChanged: {
         if (snappedEdgeX !== "") lastSnappedEdgeX = snappedEdgeX
     }
@@ -69,8 +69,8 @@ Rectangle {
             snappedEdgeY = "";
         }
     }
-    onTargetYChanged: if (dragging) updateSnapOffsetY()
-    onMaxYChanged: if (root.pinned) updateSnapOffsetY()
+    onTargetYChanged: if (root.parent.height > 0 && root.height > 0) updateSnapOffsetY()
+    onMaxYChanged: if (root.parent.height > 0 && root.height > 0) updateSnapOffsetY()
     onSnappedEdgeYChanged: {
         if (snappedEdgeY !== "") lastSnappedEdgeY = snappedEdgeY
     }
@@ -88,7 +88,7 @@ Rectangle {
     property real aspectRatio: 0.35
     property real padding: 10
     implicitWidth: {
-        return Math.min((parent.width || Screen.width) - 2 * Appearance.sizes.elevationMargin, maxWidth)
+        return Math.min(parent.width || (Screen.width - 2 * Appearance.sizes.elevationMargin), maxWidth)
     }
     implicitHeight: implicitWidth * aspectRatio + padding * 2
     color: Appearance.colors.colLayer0
