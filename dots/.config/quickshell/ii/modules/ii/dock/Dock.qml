@@ -55,7 +55,7 @@ Scope {
             }
 
             exclusiveZone: root.pinned ? implicitHeight - Appearance.sizes.elevationMargin : 0
-            exclusionMode: (root.pinned || !window) ? ExclusionMode.Normal : ExclusionMode.Ignore
+            exclusionMode: (root.pinned || !windowOrPanelOpen) ? ExclusionMode.Normal : ExclusionMode.Ignore
 
             implicitWidth: dockBackground.implicitWidth
             WlrLayershell.namespace: "quickshell:dock"
