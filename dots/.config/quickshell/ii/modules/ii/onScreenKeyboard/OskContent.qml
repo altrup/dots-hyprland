@@ -12,9 +12,11 @@ Rectangle {
     signal pinRequested(bool pinned)
 
     property real baseX: (root.parent.width - root.width) / 2
-    property real baseY: (root.parent.height - root.height) - Appearance.sizes.elevationMargin
-    x: baseX
-    y: baseY
+    property real baseY: Appearance.sizes.elevationMargin
+    property real targetX: baseX
+    property real targetY: baseY // from bottom of screen
+    x: Math.max(0, Math.min(root.parent.width - root.width, targetX))
+    y: Math.max(0, Math.min(root.parent.height - root.height, root.parent.height - root.height - targetY))
 
     property int maxWidth: {
         return Math.max(Screen.width, Screen.height) * Config.options.osk.maxWidthFraction
@@ -52,13 +54,26 @@ Rectangle {
     }
 
     component OskDragHandler: DragHandler {
-        target: root
+        target: null
         enabled: root.allowDragging
         acceptedButtons: Qt.LeftButton | Qt.RightButton
-        xAxis.minimum: 0
-        xAxis.maximum: root.parent?.width - root.width
-        yAxis.minimum: 0
-        yAxis.maximum: root.parent?.height - root.height
+
+        property real rootXAtPress: 0
+        property real rootYAtPress: 0
+
+        onActiveChanged: {
+            if (active) {
+                rootXAtPress = root.x
+                rootYAtPress = root.y
+            }
+        }
+
+        onCentroidChanged: {
+            if (!active) return;
+            
+            root.targetX = rootXAtPress + centroid.scenePosition.x - centroid.scenePressPosition.x;
+            root.targetY = root.parent.height - root.height - (rootYAtPress + centroid.scenePosition.y - centroid.scenePressPosition.y);
+        }
     }
 
     RowLayout {

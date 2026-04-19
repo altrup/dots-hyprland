@@ -28,7 +28,7 @@ Scope { // Scope
             visible: oskLoader.active && !GlobalStates.screenLocked
 
             anchors {
-                top: true
+                top: !root.pinned
                 bottom: true
                 left: true
                 right: true
@@ -37,7 +37,8 @@ Scope { // Scope
             function hide() {
                 GlobalStates.oskOpen = false
             }
-            exclusiveZone: root.pinned ? implicitHeight - Appearance.sizes.hyprlandGapsOut : 0
+            exclusiveZone: root.pinned ? implicitHeight + Appearance.sizes.hyprlandGapsOut : 0
+            implicitHeight: oskContent.height + Appearance.sizes.elevationMargin
             WlrLayershell.namespace: "quickshell:osk"
             WlrLayershell.layer: WlrLayer.Overlay
             // Hyprland 0.49: Focus is always exclusive and setting this breaks mouse focus grab
@@ -60,12 +61,19 @@ Scope { // Scope
             StyledRectangularShadow {
                 target: oskContent
             }
-            OskContent {
-                id: oskContent
-                pinned: root.pinned
-                onHideRequested: oskRoot.hide()
-                onPinRequested: (pinned) => {
-                    root.pinned = pinned;
+            Item {
+                anchors {
+                    fill: parent
+                    bottomMargin: root.pinned ? Appearance.sizes.elevationMargin : 0
+                }
+
+                OskContent {
+                    id: oskContent
+                    pinned: root.pinned
+                    onHideRequested: oskRoot.hide()
+                    onPinRequested: (pinned) => {
+                        root.pinned = pinned;
+                    }
                 }
             }
         }
