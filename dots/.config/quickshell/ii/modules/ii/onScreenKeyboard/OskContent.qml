@@ -6,8 +6,9 @@ import QtQuick.Layouts
 
 Rectangle {
     id: root
-    required property bool pinned
+    property bool pinned: false
     property bool allowDragging: true
+    property bool allowPinning: true
     signal hideRequested()
     signal pinRequested(bool pinned)
 
@@ -162,6 +163,7 @@ Rectangle {
                 Layout.leftMargin: root.padding
 
                 OskControlButton { // Pin button
+                    visible: root.allowPinning
                     toggled: root.pinned
                     downAction: () => {
                         if (!root.pinned) {

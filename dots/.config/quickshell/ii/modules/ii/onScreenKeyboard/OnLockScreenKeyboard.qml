@@ -52,12 +52,17 @@ Rectangle { // Window
     StyledRectangularShadow {
         target: oskContent
     }
-    OskContent {
-        id: oskContent
-        pinned: oskRoot.pinned
-        onHideRequested: oskRoot.hide()
-        onPinRequested: (pinned) => {
-            oskRoot.pinned = pinned;
+    Item {
+        anchors {
+            fill: parent
+            bottomMargin: Appearance.sizes.elevationMargin
+        }
+
+        OskContent {
+            id: oskContent
+            allowDragging: false
+            allowPinning: false
+            onHideRequested: oskRoot.hide()
         }
     }
 }
