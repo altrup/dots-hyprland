@@ -27,6 +27,8 @@ Rectangle {
     property real snapOffsetX: lastSnappedEdgeX === "left" ? -targetX * snapResistanceX : 
         lastSnappedEdgeX === "right" ? (maxX - targetX) * snapResistanceX : 0
     onTargetXChanged: {
+        if (!dragging) return;
+
         if (snappedEdgeX === "") {
             if (targetX < snapDistance) snappedEdgeX = "left"
             else if (targetX > maxX - snapDistance) snappedEdgeX = "right"
@@ -50,6 +52,8 @@ Rectangle {
     property real snapOffsetY: lastSnappedEdgeY === "bottom" ? -targetY * snapResistanceY : 
         lastSnappedEdgeY === "top" ? (maxY - targetY) * snapResistanceY : 0
     onTargetYChanged: {
+        if (!dragging) return;
+
         if (snappedEdgeY === "") {
             if (targetY < snapDistance) snappedEdgeY = "bottom"  // close to bottom
             else if (targetY > maxY - snapDistance) snappedEdgeY = "top"  // close to top
