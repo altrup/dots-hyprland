@@ -39,8 +39,8 @@ Rectangle {
             snappedEdgeX = "";
         }
     }
-    onTargetXChanged: if (dragging) updateSnapOffsetX()
-    onMaxXChanged: if (root.pinned) updateSnapOffsetX()
+    onTargetXChanged: if (root.parent.width > 0 && root.width > 0) updateSnapOffsetX()
+    onMaxXChanged: if (root.parent.width > 0 && root.width > 0) updateSnapOffsetX()
     onSnappedEdgeXChanged: {
         if (snappedEdgeX !== "") lastSnappedEdgeX = snappedEdgeX
     }
@@ -68,8 +68,8 @@ Rectangle {
             snappedEdgeY = "";
         }
     }
-    onTargetYChanged: if (dragging) updateSnapOffsetY()
-    onMaxYChanged: if (root.pinned) updateSnapOffsetY()
+    onTargetYChanged: if (root.parent.height > 0 && root.height > 0) updateSnapOffsetY()
+    onMaxYChanged: if (root.parent.height > 0 && root.height > 0) updateSnapOffsetY()
     onSnappedEdgeYChanged: {
         if (snappedEdgeY !== "") lastSnappedEdgeY = snappedEdgeY
     }
