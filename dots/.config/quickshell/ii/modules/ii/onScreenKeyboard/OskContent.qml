@@ -84,7 +84,9 @@ Rectangle {
 
                 OskControlButton { // Pin button
                     toggled: root.pinned
-                    downAction: () => root.pinRequested(!root.pinned)
+                    downAction: () => {
+                        root.pinRequested(!root.pinned);
+                    }
                     contentItem: MaterialSymbol {
                         text: "keep"
                         horizontalAlignment: Text.AlignHCenter
@@ -97,6 +99,7 @@ Rectangle {
                 }
                 OskControlButton {
                     visible: root.allowDragging
+                    overrideDown: buttonDragHandler.active || down
 
                     mouseArea.cursorShape: Qt.SizeAllCursor
                     contentItem: MaterialSymbol {
@@ -108,7 +111,9 @@ Rectangle {
                         contentItem.iconSize = calculateIconSize()
                     }
 
-                    OskDragHandler {}
+                    OskDragHandler {
+                        id: buttonDragHandler
+                    }
                 }
                 OskControlButton {
                     onClicked: () => {
