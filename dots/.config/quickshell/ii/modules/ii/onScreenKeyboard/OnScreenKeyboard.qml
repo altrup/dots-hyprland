@@ -9,6 +9,7 @@ import Quickshell.Io
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
+pragma ComponentBehavior: Bound
 
 Scope { // Scope
     id: root
@@ -41,6 +42,14 @@ Scope { // Scope
             property real maxHeight: 0
             onHeightChanged: {
                 maxHeight = Math.max(maxHeight, height);
+            }
+            Connections {
+                target: oskRoot.screen
+
+                function onHeightChanged() {
+                    // reset maxHeight if screen size changed
+                    oskRoot.maxHeight = 0;
+                }
             }
             implicitHeight: maxHeight
             WlrLayershell.namespace: "quickshell:osk"
