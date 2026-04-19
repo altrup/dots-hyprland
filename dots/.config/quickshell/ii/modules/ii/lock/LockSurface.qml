@@ -144,6 +144,8 @@ MouseArea {
             // Style
             clip: true
             font.pixelSize: Appearance.font.pixelSize.small
+            selectedTextColor: materialShapeChars ? "transparent" : Appearance.colors.colOnSecondaryContainer
+            selectionColor: materialShapeChars ? "transparent" : Appearance.colors.colSecondaryContainer
 
             // Password
             enabled: !root.context.unlockInProgress
@@ -176,13 +178,9 @@ MouseArea {
             }
 
             // Shake when wrong password
-            SequentialAnimation {
+            ErrorShakeAnimation {
                 id: wrongPasswordShakeAnim
-                NumberAnimation { target: passwordBox; property: "Layout.leftMargin"; to: -30; duration: 50 }
-                NumberAnimation { target: passwordBox; property: "Layout.leftMargin"; to: 30; duration: 50 }
-                NumberAnimation { target: passwordBox; property: "Layout.leftMargin"; to: -15; duration: 40 }
-                NumberAnimation { target: passwordBox; property: "Layout.leftMargin"; to: 15; duration: 40 }
-                NumberAnimation { target: passwordBox; property: "Layout.leftMargin"; to: 0; duration: 30 }
+                target: passwordBox
             }
             Connections {
                 target: GlobalStates
@@ -203,6 +201,9 @@ MouseArea {
                 }
                 sourceComponent: PasswordChars {
                     length: root.context.currentText.length
+                    selectionStart: passwordBox.selectionStart
+                    selectionEnd: passwordBox.selectionEnd
+                    cursorPosition: passwordBox.cursorPosition
                 }
             }
         }
@@ -223,7 +224,7 @@ MouseArea {
                 iconSize: 24
                 text: {
                     if (root.context.targetAction === LockContext.ActionEnum.Unlock) {
-                        return root.ctrlHeld ? "emoji_food_beverage" : "arrow_right_alt";
+                        return root.ctrlHeld ? "coffee" : "arrow_right_alt";
                     } else if (root.context.targetAction === LockContext.ActionEnum.Poweroff) {
                         return "power_settings_new";
                     } else if (root.context.targetAction === LockContext.ActionEnum.Reboot) {

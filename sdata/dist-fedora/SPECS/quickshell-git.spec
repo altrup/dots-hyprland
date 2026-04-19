@@ -2,10 +2,10 @@
 
 %bcond_with         asan
 
-%global commit      db1777c20b936a86528c1095cbcb1ebd92801402
+%global commit      7511545ee20664e3b8b8d3322c0ffe7567c56f7a
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
-%global commits     699
-%global snapdate    20251030
+%global commits     770
+%global snapdate    20260327
 %global tag         0.2.1
 
 Name:               quickshell-git
@@ -63,8 +63,6 @@ Wayland and X11.
 %endif
         -DBUILD_SHARED_LIBS=OFF \
         -DCMAKE_BUILD_TYPE=Release \
-        -DDISTRIBUTOR="Fedora COPR (errornointernet/quickshell)" \
-        -DDISTRIBUTOR_DEBUGINFO_AVAILABLE=YES \
         -DGIT_REVISION=%{commit} \
         -DINSTALL_QML_PREFIX=%{_lib}/qt6/qml
 %cmake_build
