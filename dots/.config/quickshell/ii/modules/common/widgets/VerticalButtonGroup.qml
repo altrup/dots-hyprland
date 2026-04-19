@@ -14,13 +14,15 @@ Rectangle {
     property real padding: 0
     property int clickIndex: columnLayout.clickIndex
 
+    property var visibleChildren: columnLayout.children.filter(c => c.visible)
+
     function calculateContentHeight() {
         let total = 0;
-        for (let i = 0; i < columnLayout.children.length; ++i) {
-            const child = columnLayout.children[i];
+        for (let i = 0; i < root.visibleChildren.length; ++i) {
+            const child = root.visibleChildren[i];
             total += child.baseHeight ?? child.implicitHeight ?? child.height;
         }
-        return total + columnLayout.spacing * (columnLayout.children.length - 1);
+        return total + columnLayout.spacing * (root.visibleChildren.length - 1);
     }
 
     property real contentHeight: calculateContentHeight()
@@ -29,10 +31,10 @@ Rectangle {
         contentHeight = calculateContentHeight();
     }
 
-    topLeftRadius: columnLayout.children.length > 0 ? (columnLayout.children[0].radius + padding) : 
+    topLeftRadius: root.visibleChildren.length > 0 ? (root.visibleChildren[0].radius + padding) : 
         Appearance?.rounding?.small
     topRightRadius: topLeftRadius
-    bottomLeftRadius: columnLayout.children.length > 0 ? (columnLayout.children[columnLayout.children.length - 1].radius + padding) : 
+    bottomLeftRadius: root.visibleChildren.length > 0 ? (root.visibleChildren[root.visibleChildren.length - 1].radius + padding) : 
         Appearance?.rounding?.small
     bottomRightRadius: bottomLeftRadius
 

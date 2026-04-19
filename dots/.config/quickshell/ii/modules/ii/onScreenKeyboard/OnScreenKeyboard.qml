@@ -28,6 +28,7 @@ Scope { // Scope
             visible: oskLoader.active && !GlobalStates.screenLocked
 
             anchors {
+                top: true
                 bottom: true
                 left: true
                 right: true
@@ -37,7 +38,6 @@ Scope { // Scope
                 GlobalStates.oskOpen = false
             }
             exclusiveZone: root.pinned ? implicitHeight - Appearance.sizes.hyprlandGapsOut : 0
-            implicitHeight: oskContent.height + Appearance.sizes.elevationMargin * 2
             WlrLayershell.namespace: "quickshell:osk"
             WlrLayershell.layer: WlrLayer.Overlay
             // Hyprland 0.49: Focus is always exclusive and setting this breaks mouse focus grab

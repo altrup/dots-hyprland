@@ -7,10 +7,14 @@ import QtQuick.Layouts
 Rectangle {
     id: root
     required property bool pinned
+    property bool allowDragging: true
     signal hideRequested()
     signal pinRequested(bool pinned)
 
-    anchors.centerIn: parent
+    property real baseX: (root.parent.width - root.width) / 2
+    property real baseY: (root.parent.height - root.height) - Appearance.sizes.elevationMargin
+    x: baseX
+    y: baseY
 
     property int maxWidth: {
         return Math.max(Screen.width, Screen.height) * Config.options.osk.maxWidthFraction
@@ -47,40 +51,82 @@ Rectangle {
         }
     }
 
+    component OskDragHandler: DragHandler {
+        target: root
+        enabled: root.allowDragging
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        xAxis.minimum: 0
+        xAxis.maximum: root.parent?.width - root.width
+        yAxis.minimum: 0
+        yAxis.maximum: root.parent?.height - root.height
+    }
+
     RowLayout {
         id: oskRowLayout
         anchors {
             fill: parent
             margins: root.padding
+            leftMargin: 0
         }
         spacing: root.padding
-        VerticalButtonGroup {
-            Layout.fillWidth: true
-            OskControlButton { // Pin button
-                toggled: root.pinned
-                downAction: () => root.pinRequested(!root.pinned)
-                contentItem: MaterialSymbol {
-                    text: "keep"
-                    horizontalAlignment: Text.AlignHCenter
-                    iconSize: parent.calculateIconSize()
-                    color: root.pinned ? Appearance.m3colors.m3onPrimary : Appearance.colors.colOnLayer0
+        RowLayout {
+            anchors {
+                top: parent.top
+                bottom: parent.bottom
+                topMargin: -root.padding
+                bottomMargin: -root.padding
+            }
+            
+            VerticalButtonGroup {
+                id: controlButtons
+                Layout.fillWidth: true
+                Layout.leftMargin: root.padding
+
+                OskControlButton { // Pin button
+                    toggled: root.pinned
+                    downAction: () => root.pinRequested(!root.pinned)
+                    contentItem: MaterialSymbol {
+                        text: "keep"
+                        horizontalAlignment: Text.AlignHCenter
+                        iconSize: parent.calculateIconSize()
+                        color: root.pinned ? Appearance.m3colors.m3onPrimary : Appearance.colors.colOnLayer0
+                    }
+                    onHeightChanged: {
+                        contentItem.iconSize = calculateIconSize()
+                    }
                 }
-                onHeightChanged: {
-                    contentItem.iconSize = calculateIconSize()
+                OskControlButton {
+                    visible: root.allowDragging
+
+                    mouseArea.cursorShape: Qt.SizeAllCursor
+                    contentItem: MaterialSymbol {
+                        horizontalAlignment: Text.AlignHCenter
+                        text: "drag_indicator"
+                        iconSize: parent.calculateIconSize()
+                    }
+                    onHeightChanged: {
+                        contentItem.iconSize = calculateIconSize()
+                    }
+
+                    OskDragHandler {}
+                }
+                OskControlButton {
+                    onClicked: () => {
+                        root.hideRequested()
+                    }
+                    contentItem: MaterialSymbol {
+                        horizontalAlignment: Text.AlignHCenter
+                        text: "keyboard_hide"
+                        iconSize: parent.calculateIconSize()
+                    }
+                    onHeightChanged: {
+                        contentItem.iconSize = calculateIconSize()
+                    }
                 }
             }
-            OskControlButton {
-                onClicked: () => {
-                    root.hideRequested()
-                }
-                contentItem: MaterialSymbol {
-                    horizontalAlignment: Text.AlignHCenter
-                    text: "keyboard_hide"
-                    iconSize: parent.calculateIconSize()
-                }
-                onHeightChanged: {
-                    contentItem.iconSize = calculateIconSize()
-                }
+
+            OskDragHandler {
+                grabPermissions: PointerHandler.CanTakeOverFromHandlersOfDifferentType | PointerHandler.ApprovesTakeOverByAnything
             }
         }
         Rectangle {
