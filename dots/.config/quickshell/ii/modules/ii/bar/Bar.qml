@@ -61,11 +61,8 @@ Scope {
                 property bool superShow: false
                 property bool mustShow: (GlobalFocusGrab.enabled || hoverRegion.containsMouse || superShow) && (Config?.options.bar.autoHide.enableOnFullscreen || window?.fullscreen !== 2)
                 exclusionMode: ExclusionMode.Ignore
-                exclusiveZone: (barRoot.autoHideEnable && (!mustShow || (window?.fullscreen !== 2 && !Config?.options.bar.autoHide.pushWindows))) ? 0 :
+                exclusiveZone: (Config?.options.bar.autoHide.enable && (!mustShow || !Config?.options.bar.autoHide.pushWindows)) ? 0 :
                     Appearance.sizes.baseBarHeight + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)
-                Behavior on exclusiveZone {
-                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-                }
                 WlrLayershell.namespace: "quickshell:bar"
                 WlrLayershell.layer: WlrLayer.Overlay
                 implicitHeight: Appearance.sizes.barHeight + Appearance.rounding.screenRounding
