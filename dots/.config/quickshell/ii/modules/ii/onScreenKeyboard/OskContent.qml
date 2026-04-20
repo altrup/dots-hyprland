@@ -13,14 +13,16 @@ Rectangle {
     signal hideRequested()
     signal pinRequested(bool pinned)
 
+    property real snapDistance: 0.02 * Math.min(root.parent.width, root.parent.height)
+    property real releaseDistance: 1.5 * snapDistance
+    property real snapResistance: 0.8
+    property real sampleBlend: 0.5 // how much of velocity to blend from sample
+    property real friction: 0.95 // why does this have to be so high
+
     property real targetX: (root.parent.width - root.width) / 2
     property real targetY: (root.parent.height - root.height)
 
     property bool dragging: false
-
-    property real snapDistance: 0.015 * Math.min(root.parent.width, root.parent.height)
-    property real releaseDistance: 1.5 * snapDistance
-    property real snapResistance: 0.8
 
     component SnapEdge: Item {
         required property real coordinate
@@ -105,6 +107,65 @@ Rectangle {
     x: targetX + leftEdge.snapOffset + verticalCenter.snapOffset + rightEdge.snapOffset
     y: targetY + topEdge.snapOffset + bottomEdge.snapOffset
 
+    property real lastTime: 0
+    property real lastX: 0
+    property real lastY: 0
+    property real velocityX: 0
+    property real velocityY: 0
+    // sample velocity while dragging
+    function sampleVelocity() {
+        if (!dragging) return;
+
+        const now = Date.now();
+        const dt = (now - lastTime) / 1000;
+        if (dt > 1 / 60) {
+            velocityX = (x - lastX) / dt;
+            velocityY = (y - lastY) / dt;
+            lastX = x;
+            lastY = y;
+            lastTime = now;
+        }
+    }
+    onDraggingChanged: {
+        momentumTimer.running = !dragging;
+        if (dragging) {
+            lastTime = Date.now();
+            lastX = x;
+            lastY = y;
+            velocityX = 0;
+            velocityY = 0;
+        }
+    }
+    onXChanged: sampleVelocity();
+    onYChanged: sampleVelocity();
+    Timer {
+        id: momentumTimer
+        interval: 1000 / 60
+        repeat: true
+        running: false
+        
+        onTriggered: {
+            // sample velocity
+            const dt = interval / 1000;
+            velocityX = (1 - sampleBlend) * velocityX + sampleBlend * (x - lastX) / dt;
+            velocityY = (1 - sampleBlend) * velocityY + sampleBlend * (y - lastY) / dt;
+            lastX = x;
+            lastY = y;
+
+            // momentum calculations
+            velocityX *= Math.pow(1 - friction, dt);
+            velocityY *= Math.pow(1 - friction, dt);
+            targetX += velocityX * dt;
+            targetY += velocityY * dt;
+            
+            if (Math.hypot(velocityX, velocityY) < 5) {  // px/sec threshold
+                running = false;
+                velocityX = 0;
+                velocityY = 0;
+            }
+        }
+    }
+
     property int maxWidth: {
         return Math.max(Screen.width, Screen.height) * Config.options.osk.maxWidthFraction
     }
@@ -159,7 +220,7 @@ Rectangle {
 
         onCentroidChanged: {
             if (!active) return;
-            
+
             root.targetX = rootXAtPress + centroid.scenePosition.x - centroid.scenePressPosition.x;
             root.targetY = rootYAtPress + centroid.scenePosition.y - centroid.scenePressPosition.y;
         }
