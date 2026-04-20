@@ -309,7 +309,7 @@ Rectangle {
             }
             OskDragHandler {
                 id: leftBarDragHandler
-                grabPermissions: PointerHandler.CanTakeOverFromHandlersOfDifferentType | PointerHandler.ApprovesTakeOverByAnything
+                grabPermissions: PointerHandler.TakeOverForbidden
             }
         }
         Rectangle {
