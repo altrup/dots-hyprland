@@ -17,7 +17,7 @@ Rectangle {
     property real releaseDistance: 1.5 * snapDistance
     property real snapResistance: 0.8
     property real sampleBlend: 0.5 // how much of velocity to blend from sample
-    property real friction: 0.95 // why does this have to be so high
+    property real friction: 150 // how many pixels/second to decrease velocity by per second
 
     property real targetX: (root.parent.width - root.width) / 2
     property real targetY: (root.parent.height - root.height)
@@ -119,10 +119,10 @@ Rectangle {
         const now = Date.now();
         const dt = (now - lastTime) / 1000;
         if (dt > 1 / 60) {
-            velocityX = (x - lastX) / dt;
-            velocityY = (y - lastY) / dt;
-            lastX = x;
-            lastY = y;
+            velocityX = (targetX - lastX) / dt;
+            velocityY = (targetY - lastY) / dt;
+            lastX = targetX;
+            lastY = targetY;
             lastTime = now;
         }
     }
@@ -147,21 +147,26 @@ Rectangle {
         onTriggered: {
             // sample velocity
             const dt = interval / 1000;
-            velocityX = (1 - sampleBlend) * velocityX + sampleBlend * (x - lastX) / dt;
-            velocityY = (1 - sampleBlend) * velocityY + sampleBlend * (y - lastY) / dt;
-            lastX = x;
-            lastY = y;
+            root.velocityX = (1 - root.sampleBlend) * root.velocityX + root.sampleBlend * (root.x - root.lastX) / dt;
+            root.velocityY = (1 - root.sampleBlend) * root.velocityY + root.sampleBlend * (root.y - root.lastY) / dt;
+            root.lastX = root.x;
+            root.lastY = root.y;
 
             // momentum calculations
-            velocityX *= Math.pow(1 - friction, dt);
-            velocityY *= Math.pow(1 - friction, dt);
-            targetX += velocityX * dt;
-            targetY += velocityY * dt;
+            const speed = Math.hypot(root.velocityX, root.velocityY);
+            if (speed > 0) {
+                const newSpeed = Math.max(0, speed - root.friction * dt);
+                const scale = newSpeed / speed;
+                root.velocityX *= scale;
+                root.velocityY *= scale;
+            }
+            root.targetX += root.velocityX * dt;
+            root.targetY += root.velocityY * dt;
             
-            if (Math.hypot(velocityX, velocityY) < 5) {  // px/sec threshold
+            if (speed < 5) {  // px/sec threshold
                 running = false;
-                velocityX = 0;
-                velocityY = 0;
+                root.velocityX = 0;
+                root.velocityY = 0;
             }
         }
     }
