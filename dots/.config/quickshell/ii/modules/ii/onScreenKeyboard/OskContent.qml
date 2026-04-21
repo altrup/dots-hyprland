@@ -146,9 +146,9 @@ Rectangle {
         onTriggered: {
             // sample velocity
             const dt = interval / 1000;
-            const rentention = Math.exp(-dt / root.sampleSmoothingTime);
-            root.velocityX = rentention * root.velocityX + (1 - rentention) * (root.x - root.lastX) / dt;
-            root.velocityY = rentention * root.velocityY + (1 - rentention) * (root.y - root.lastY) / dt;
+            const retention = Math.exp(-dt / root.sampleSmoothingTime);
+            root.velocityX = retention * root.velocityX + (1 - retention) * (root.x - root.lastX) / dt;
+            root.velocityY = retention * root.velocityY + (1 - retention) * (root.y - root.lastY) / dt;
             root.lastX = root.x;
             root.lastY = root.y;
 
