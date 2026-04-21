@@ -16,65 +16,77 @@ Scope { // Scope
     property bool pinned: Config.options?.osk.pinnedOnStartup ?? false
     // we store screenHeight because Screen.height doesn't take exclusiveZones into effect
     property real screenHeight: oskContent.height + 2 * Appearance.sizes.elevationMargin
+
+    Loader {
+        id: oskLoader
+        // only load oskLoader if used, after that keep loaded
+        active: false
+        Connections {
+            target: GlobalStates
+            function onOskOpenChanged() {
+                if (GlobalStates.oskOpen) oskLoader.active = true;
+            }
+        }
         
-    PanelWindow { // Window
-        id: oskRoot
-        visible: GlobalStates.oskOpen && !GlobalStates.screenLocked
-        onVisibleChanged: {
-            if (!oskRoot.visible) {
-                Ydotool.releaseAllKeys();
+        sourceComponent: PanelWindow { // Window
+            id: oskRoot
+            visible: GlobalStates.oskOpen && !GlobalStates.screenLocked
+            onVisibleChanged: {
+                if (!oskRoot.visible) {
+                    Ydotool.releaseAllKeys();
+                }
             }
-        }
 
-        anchors {
-            top: !root.pinned
-            bottom: true
-            left: true
-            right: true
-        }
-
-        function hide() {
-            GlobalStates.oskOpen = false
-        }
-        exclusiveZone: root.pinned ? oskContent.height + 2 * Appearance.sizes.elevationMargin - Appearance.sizes.hyprlandGapsOut : 0
-        onHeightChanged: {
-            if (!root.pinned) screenHeight = oskRoot.height;
-        }
-        implicitHeight: root.screenHeight
-        WlrLayershell.namespace: "quickshell:osk"
-        WlrLayershell.layer: WlrLayer.Overlay
-        // Hyprland 0.49: Focus is always exclusive and setting this breaks mouse focus grab
-        // WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
-        color: "transparent"
-
-        mask: Region {
-            item: oskContent
-        }
-
-        // Make it usable with other panels
-        Component.onCompleted: {
-            GlobalFocusGrab.addPersistent(oskRoot);
-        }
-        Component.onDestruction: {
-            GlobalFocusGrab.removePersistent(oskRoot);
-        }
-
-        // Content
-        StyledRectangularShadow {
-            target: oskContent
-        }
-        Item {
             anchors {
-                fill: parent
-                margins: Appearance.sizes.elevationMargin
+                top: !root.pinned
+                bottom: true
+                left: true
+                right: true
             }
 
-            OskContent {
-                id: oskContent
-                pinned: root.pinned
-                onHideRequested: oskRoot.hide()
-                onPinRequested: (pinned) => {
-                    root.pinned = pinned;
+            function hide() {
+                GlobalStates.oskOpen = false
+            }
+            exclusiveZone: root.pinned ? oskContent.height + 2 * Appearance.sizes.elevationMargin - Appearance.sizes.hyprlandGapsOut : 0
+            onHeightChanged: {
+                if (!root.pinned) screenHeight = oskRoot.height;
+            }
+            implicitHeight: root.screenHeight
+            WlrLayershell.namespace: "quickshell:osk"
+            WlrLayershell.layer: WlrLayer.Overlay
+            // Hyprland 0.49: Focus is always exclusive and setting this breaks mouse focus grab
+            // WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+            color: "transparent"
+
+            mask: Region {
+                item: oskContent
+            }
+
+            // Make it usable with other panels
+            Component.onCompleted: {
+                GlobalFocusGrab.addPersistent(oskRoot);
+            }
+            Component.onDestruction: {
+                GlobalFocusGrab.removePersistent(oskRoot);
+            }
+
+            // Content
+            StyledRectangularShadow {
+                target: oskContent
+            }
+            Item {
+                anchors {
+                    fill: parent
+                    margins: Appearance.sizes.elevationMargin
+                }
+
+                OskContent {
+                    id: oskContent
+                    pinned: root.pinned
+                    onHideRequested: oskRoot.hide()
+                    onPinRequested: (pinned) => {
+                        root.pinned = pinned;
+                    }
                 }
             }
         }
