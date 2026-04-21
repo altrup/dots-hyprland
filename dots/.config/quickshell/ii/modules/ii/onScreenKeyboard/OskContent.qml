@@ -19,10 +19,40 @@ Rectangle {
     property real sampleSmoothingTime: 0.04 // time constant of blending velocity with sampled data
     property real friction: 150 // how many pixels/second to decrease velocity by per second
 
+    property bool dragging: false
+
     property real targetX: (root.parent.width - root.width) / 2
     property real targetY: (root.parent.height - root.height)
 
-    property bool dragging: false
+    Connections {
+        target: root.parent
+        property real lastRootWidth: root.width
+        property real lastRootHeight: root.height
+        property real lastWidth: root.parent.width
+        property real lastHeight: root.parent.height
+        function onWidthChanged() {
+            if (lastWidth <= 0 || root.parent.width <= 0) return;
+            // set targetX to same relative location
+            if (lastWidth - lastRootWidth > 0) {
+                root.targetX *= (root.parent.width - root.width) / (lastWidth - lastRootWidth);
+            } else {
+                root.targetX = (root.parent.width - root.width) / 2; // default value
+            }
+            lastRootWidth = root.width;
+            lastWidth = root.parent.width;
+        }
+        function onHeightChanged() {
+            if (lastHeight <= 0 || root.parent.height <= 0) return;
+            // set targetY to same relative location
+            if (lastHeight - lastRootHeight > 0) {
+                root.targetY *= (root.parent.height - root.height) / (lastHeight - lastRootHeight);
+            } else {
+                root.targetY = (root.parent.height - root.height); // default value
+            }
+            lastRootHeight = root.height;
+            lastHeight = root.parent.height;
+        }
+    }
 
     component SnapEdge: Item {
         required property real coordinate
