@@ -16,7 +16,7 @@ Rectangle {
     property real snapDistance: 0.02 * Math.min(root.parent.width, root.parent.height)
     property real releaseDistance: 1.5 * snapDistance
     property real snapResistance: 0.8
-    property real sampleBlend: 0.5 // how much of velocity to blend from sample
+    property real sampleSmoothingTime: 0.04 // time constant of blending velocity with sampled data
     property real friction: 150 // how many pixels/second to decrease velocity by per second
 
     property real targetX: (root.parent.width - root.width) / 2
@@ -147,8 +147,9 @@ Rectangle {
         onTriggered: {
             // sample velocity
             const dt = interval / 1000;
-            root.velocityX = (1 - root.sampleBlend) * root.velocityX + root.sampleBlend * (root.x - root.lastX) / dt;
-            root.velocityY = (1 - root.sampleBlend) * root.velocityY + root.sampleBlend * (root.y - root.lastY) / dt;
+            const rentention = Math.exp(-dt / root.sampleSmoothingTime);
+            root.velocityX = rentention * root.velocityX + (1 - rentention) * (root.x - root.lastX) / dt;
+            root.velocityY = rentention * root.velocityY + (1 - rentention) * (root.y - root.lastY) / dt;
             root.lastX = root.x;
             root.lastY = root.y;
 
