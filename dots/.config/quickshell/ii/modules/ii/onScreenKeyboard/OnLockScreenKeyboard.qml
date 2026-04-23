@@ -49,9 +49,6 @@ Rectangle { // Window
     }
 
     // Content
-    StyledRectangularShadow {
-        target: oskContent
-    }
     Item {
         anchors {
             fill: parent
