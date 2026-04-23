@@ -15,7 +15,7 @@ Item {
     property real snapDistance: 0.02 * Math.min(root.parent.width, root.parent.height)
     property real releaseDistance: 1.5 * snapDistance
     property real snapResistance: 0.8
-    property real sampleSmoothingTime: 0.04 // time constant of blending velocity with sampled data
+    property real sampleSmoothingTime: 0.03 // time constant of blending velocity with sampled data
     property real friction: 150 // how many pixels/second to decrease velocity by per second
 
     property list<var> dragHandlers: []
