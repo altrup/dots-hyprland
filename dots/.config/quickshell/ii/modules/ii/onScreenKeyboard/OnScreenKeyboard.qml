@@ -13,7 +13,7 @@ pragma ComponentBehavior: Bound
 
 Scope { // Scope
     id: root
-    property bool pinned: Config.options?.osk.pinnedOnStartup ?? false
+    property string pinEdge: Config.options?.osk.pinnedOnStartup ? "bottom" : ""
     // we store screenHeight because Screen.height doesn't take exclusiveZones into effect
     property real screenHeight: oskContent.height + 2 * Appearance.sizes.elevationMargin
 
@@ -38,8 +38,8 @@ Scope { // Scope
             }
 
             anchors {
-                top: !root.pinned
-                bottom: true
+                top: root.pinEdge.length === 0 || root.pinEdge === "top"
+                bottom: root.pinEdge.length === 0 || root.pinEdge === "bottom"
                 left: true
                 right: true
             }
@@ -47,9 +47,9 @@ Scope { // Scope
             function hide() {
                 GlobalStates.oskOpen = false
             }
-            exclusiveZone: root.pinned ? oskContent.height + 2 * Appearance.sizes.elevationMargin - Appearance.sizes.hyprlandGapsOut : 0
+            exclusiveZone: root.pinEdge.length > 0 ? oskContent.height + 2 * Appearance.sizes.elevationMargin - Appearance.sizes.hyprlandGapsOut : 0
             onHeightChanged: {
-                if (!root.pinned) screenHeight = oskRoot.height;
+                if (root.pinEdge.length === 0) screenHeight = oskRoot.height;
             }
             implicitHeight: root.screenHeight
             WlrLayershell.namespace: "quickshell:osk"
@@ -79,10 +79,10 @@ Scope { // Scope
 
                 OskContent {
                     id: oskContent
-                    pinned: root.pinned
+                    pinEdge: root.pinEdge
                     onHideRequested: oskRoot.hide()
-                    onPinRequested: (pinned) => {
-                        root.pinned = pinned;
+                    onPinEdgeRequested: (pinEdge) => {
+                        root.pinEdge = pinEdge;
                     }
                 }
             }
