@@ -71,9 +71,6 @@ Scope { // Scope
             }
 
             // Content
-            StyledRectangularShadow {
-                target: oskContent
-            }
             Item {
                 anchors {
                     fill: parent

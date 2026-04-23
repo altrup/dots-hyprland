@@ -5,7 +5,7 @@ import QtQuick
 import QtQuick.Layouts
 pragma ComponentBehavior: Bound
 
-Rectangle {
+Item {
     id: root
     required property bool pinned
     property bool allowDragging: true
@@ -195,8 +195,6 @@ Rectangle {
         return Math.min(parent.width || (Screen.width - 2 * Appearance.sizes.elevationMargin), maxWidth)
     }
     implicitHeight: implicitWidth * aspectRatio + padding * 2
-    color: Appearance.colors.colLayer0
-    radius: Appearance.rounding.windowRounding
 
     Keys.onPressed: (event) => { // Esc to close
         if (event.key === Qt.Key_Escape) {
@@ -248,128 +246,137 @@ Rectangle {
         }
     }
 
-    RowLayout {
-        id: oskRowLayout
-        anchors {
-            fill: parent
-            margins: root.padding
-            leftMargin: 0
-        }
-        spacing: root.padding
+    StyledRectangularShadow {
+        target: oskBackground
+    }
+    Rectangle {
+        id: oskBackground
+        anchors.fill: parent
+        color: Appearance.colors.colLayer0
+        radius: Appearance.rounding.windowRounding
         RowLayout {
+            id: oskRowLayout
             anchors {
-                top: parent.top
-                bottom: parent.bottom
-                topMargin: -root.padding
-                bottomMargin: -root.padding
+                fill: parent
+                margins: root.padding
+                leftMargin: 0
             }
-            
-            VerticalButtonGroup {
-                id: controlButtons
-                Layout.fillWidth: true
-                Layout.leftMargin: root.padding
+            spacing: root.padding
+            RowLayout {
+                anchors {
+                    top: parent.top
+                    bottom: parent.bottom
+                    topMargin: -root.padding
+                    bottomMargin: -root.padding
+                }
 
-                OskControlButton { // Pin button
-                    toggled: root.pinned
-                    downAction: () => {
-                        if (!root.pinned) {
-                            topEdge.snapped = false;
-                            bottomEdge.snapped = true;
+                VerticalButtonGroup {
+                    id: controlButtons
+                    Layout.fillWidth: true
+                    Layout.leftMargin: root.padding
+
+                    OskControlButton { // Pin button
+                        toggled: root.pinned
+                        downAction: () => {
+                            if (!root.pinned) {
+                                topEdge.snapped = false;
+                                bottomEdge.snapped = true;
+                            }
+                            root.pinRequested(!root.pinned);
                         }
-                        root.pinRequested(!root.pinned);
+                        contentItem: MaterialSymbol {
+                            text: "keep"
+                            horizontalAlignment: Text.AlignHCenter
+                            iconSize: parent.calculateIconSize()
+                            color: root.pinned ? Appearance.m3colors.m3onPrimary : Appearance.colors.colOnLayer0
+                        }
+                        onHeightChanged: {
+                            contentItem.iconSize = calculateIconSize()
+                        }
                     }
-                    contentItem: MaterialSymbol {
-                        text: "keep"
-                        horizontalAlignment: Text.AlignHCenter
-                        iconSize: parent.calculateIconSize()
-                        color: root.pinned ? Appearance.m3colors.m3onPrimary : Appearance.colors.colOnLayer0
+                    OskControlButton {
+                        visible: root.allowDragging
+                        overrideDown: buttonDragHandler.active || leftBarDragHandler.active || pressHandler.pressed || down
+
+                        mouseArea.cursorShape: Qt.SizeAllCursor
+                        contentItem: MaterialSymbol {
+                            horizontalAlignment: Text.AlignHCenter
+                            text: "drag_indicator"
+                            iconSize: parent.calculateIconSize()
+                        }
+                        onHeightChanged: {
+                            contentItem.iconSize = calculateIconSize()
+                        }
+
+                        OskDragHandler {
+                            id: buttonDragHandler
+                        }
                     }
-                    onHeightChanged: {
-                        contentItem.iconSize = calculateIconSize()
+                    OskControlButton {
+                        onClicked: () => {
+                            root.hideRequested()
+                        }
+                        contentItem: MaterialSymbol {
+                            horizontalAlignment: Text.AlignHCenter
+                            text: "keyboard_hide"
+                            iconSize: parent.calculateIconSize()
+                        }
+                        onHeightChanged: {
+                            contentItem.iconSize = calculateIconSize()
+                        }
                     }
                 }
-                OskControlButton {
-                    visible: root.allowDragging
-                    overrideDown: buttonDragHandler.active || leftBarDragHandler.active || pressHandler.pressed || down
 
-                    mouseArea.cursorShape: Qt.SizeAllCursor
-                    contentItem: MaterialSymbol {
-                        horizontalAlignment: Text.AlignHCenter
-                        text: "drag_indicator"
-                        iconSize: parent.calculateIconSize()
-                    }
-                    onHeightChanged: {
-                        contentItem.iconSize = calculateIconSize()
-                    }
-
-                    OskDragHandler {
-                        id: buttonDragHandler
-                    }
+                TapHandler {
+                    id: pressHandler
+                    acceptedButtons: leftBarDragHandler.acceptedButtons
                 }
-                OskControlButton {
-                    onClicked: () => {
-                        root.hideRequested()
-                    }
-                    contentItem: MaterialSymbol {
-                        horizontalAlignment: Text.AlignHCenter
-                        text: "keyboard_hide"
-                        iconSize: parent.calculateIconSize()
-                    }
-                    onHeightChanged: {
-                        contentItem.iconSize = calculateIconSize()
-                    }
+                OskDragHandler {
+                    id: leftBarDragHandler
+                    grabPermissions: PointerHandler.TakeOverForbidden
                 }
             }
-
-            TapHandler {
-                id: pressHandler
-                acceptedButtons: leftBarDragHandler.acceptedButtons
+            Rectangle {
+                Layout.topMargin: 20
+                Layout.bottomMargin: 20
+                Layout.fillHeight: true
+                implicitWidth: 1
+                color: Appearance.colors.colOutlineVariant
             }
-            OskDragHandler {
-                id: leftBarDragHandler
-                grabPermissions: PointerHandler.TakeOverForbidden
-            }
-        }
-        Rectangle {
-            Layout.topMargin: 20
-            Layout.bottomMargin: 20
-            Layout.fillHeight: true
-            implicitWidth: 1
-            color: Appearance.colors.colOutlineVariant
-        }
-        Item {
-            id: keyboard    
-            property var layouts: Layouts.byName
-            property var activeLayoutName: (layouts.hasOwnProperty(Config.options?.osk.layout)) 
-                ? Config.options?.osk.layout 
-                : Layouts.defaultLayout
-            property var currentLayout: layouts[activeLayoutName]
+            Item {
+                id: keyboard    
+                property var layouts: Layouts.byName
+                property var activeLayoutName: (layouts.hasOwnProperty(Config.options?.osk.layout)) 
+                    ? Config.options?.osk.layout 
+                    : Layouts.defaultLayout
+                property var currentLayout: layouts[activeLayoutName]
 
-            implicitWidth: keyRows.implicitWidth
-            implicitHeight: keyRows.implicitHeight
-            
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+                implicitWidth: keyRows.implicitWidth
+                implicitHeight: keyRows.implicitHeight
+                
+                Layout.fillWidth: true
+                Layout.fillHeight: true
 
-            ColumnLayout {
-                id: keyRows
-                anchors.fill: parent
-                spacing: 5
+                ColumnLayout {
+                    id: keyRows
+                    anchors.fill: parent
+                    spacing: 5
 
-                Repeater {
-                    model: keyboard.currentLayout.keys
+                    Repeater {
+                        model: keyboard.currentLayout.keys
 
-                    delegate: RowLayout {
-                        id: keyRow
-                        required property var modelData
-                        spacing: 5
-                        
-                        Repeater {
-                            model: modelData
-                            // A normal key looks like this: {label: "a", labelShift: "A", shape: "normal", keycode: 30, type: "normal"}
-                            delegate: OskKey { 
-                                required property var modelData
-                                keyData: modelData
+                        delegate: RowLayout {
+                            id: keyRow
+                            required property var modelData
+                            spacing: 5
+                            
+                            Repeater {
+                                model: modelData
+                                // A normal key looks like this: {label: "a", labelShift: "A", shape: "normal", keycode: 30, type: "normal"}
+                                delegate: OskKey { 
+                                    required property var modelData
+                                    keyData: modelData
+                                }
                             }
                         }
                     }
