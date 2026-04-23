@@ -9,23 +9,33 @@ import Quickshell.Io
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
+pragma ComponentBehavior: Bound
 
 Scope { // Scope
     id: root
     property bool pinned: Config.options?.osk.pinnedOnStartup ?? false
+    // we store screenHeight because Screen.height doesn't take exclusiveZones into effect
+    property real screenHeight: oskContent.height + 2 * Appearance.sizes.elevationMargin
 
     Loader {
         id: oskLoader
-        active: GlobalStates.oskOpen
-        onActiveChanged: {
-            if (!oskLoader.active) {
-                Ydotool.releaseAllKeys();
+        // only load oskLoader if used, after that keep loaded
+        active: false
+        Connections {
+            target: GlobalStates
+            function onOskOpenChanged() {
+                if (GlobalStates.oskOpen) oskLoader.active = true;
             }
         }
         
         sourceComponent: PanelWindow { // Window
             id: oskRoot
-            visible: oskLoader.active && !GlobalStates.screenLocked
+            visible: GlobalStates.oskOpen && !GlobalStates.screenLocked
+            onVisibleChanged: {
+                if (!oskRoot.visible) {
+                    Ydotool.releaseAllKeys();
+                }
+            }
 
             anchors {
                 top: !root.pinned
@@ -37,12 +47,11 @@ Scope { // Scope
             function hide() {
                 GlobalStates.oskOpen = false
             }
-            exclusiveZone: root.pinned ? oskContent.height + Appearance.sizes.elevationMargin + Appearance.sizes.hyprlandGapsOut : 0
-            property real maxHeight: 0
+            exclusiveZone: root.pinned ? oskContent.height + 2 * Appearance.sizes.elevationMargin - Appearance.sizes.hyprlandGapsOut : 0
             onHeightChanged: {
-                maxHeight = Math.max(maxHeight, height);
+                if (!root.pinned) screenHeight = oskRoot.height;
             }
-            implicitHeight: maxHeight
+            implicitHeight: root.screenHeight
             WlrLayershell.namespace: "quickshell:osk"
             WlrLayershell.layer: WlrLayer.Overlay
             // Hyprland 0.49: Focus is always exclusive and setting this breaks mouse focus grab
@@ -62,9 +71,6 @@ Scope { // Scope
             }
 
             // Content
-            StyledRectangularShadow {
-                target: oskContent
-            }
             Item {
                 anchors {
                     fill: parent
