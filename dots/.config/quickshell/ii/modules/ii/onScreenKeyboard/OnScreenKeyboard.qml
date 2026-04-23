@@ -57,9 +57,6 @@ Scope { // Scope
             }
 
             // Content
-            StyledRectangularShadow {
-                target: oskContent
-            }
             OskContent {
                 id: oskContent
                 pinned: root.pinned
