@@ -125,12 +125,10 @@ Item {
         coordinate: root.targetY
         edgeCoordinate: 0
         side: "lower"
+        requireManualUnsnap: root.pinEdge === "top"
 
         onSnappedChanged: {
-            if (!snapped && root.pinEdge === "top" && root.dragging) {
-                requireManualUnsnap = false;
-                root.pinEdgeRequested("");
-            }
+            if (!snapped && root.pinEdge === "top" && root.dragging) root.pinEdgeRequested("");
         }
     }
     SnapEdge {
@@ -139,12 +137,10 @@ Item {
         coordinate: root.targetY
         edgeCoordinate: root.maxY
         side: "upper"
+        requireManualUnsnap: root.pinEdge === "bottom"
 
         onSnappedChanged: {
-            if (!snapped && root.pinEdge === "bottom" && root.dragging) {
-                requireManualUnsnap = false;
-                root.pinEdgeRequested("");
-            }
+            if (!snapped && root.pinEdge === "bottom" && root.dragging) root.pinEdgeRequested("");
         }
     }
 
@@ -298,9 +294,7 @@ Item {
                                                 oskContent.y + root.height / 2 >= root.parent.height / 2 ? "bottom" : "top";
                             if (nextPinEdge.length > 0) {
                                 topEdge.snapped = nextPinEdge === "top";
-                                topEdge.requireManualUnsnap = nextPinEdge === "top";
                                 bottomEdge.snapped = nextPinEdge === "bottom";
-                                bottomEdge.requireManualUnsnap = nextPinEdge === "bottom";
 
                                 momentumTimer.velocityY = 0;
                             }
