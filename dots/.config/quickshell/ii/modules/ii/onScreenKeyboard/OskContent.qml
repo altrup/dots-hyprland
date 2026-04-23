@@ -19,7 +19,8 @@ Rectangle {
     property real sampleSmoothingTime: 0.04 // time constant of blending velocity with sampled data
     property real friction: 150 // how many pixels/second to decrease velocity by per second
 
-    property bool dragging: false
+    property list<var> dragHandlers: []
+    property bool dragging: dragHandlers.some(h => h.active)
 
     property real targetX: (root.parent.width - root.width) / 2
     property real targetY: (root.parent.height - root.height)
@@ -137,67 +138,51 @@ Rectangle {
     x: targetX + leftEdge.snapOffset + verticalCenter.snapOffset + rightEdge.snapOffset
     y: targetY + topEdge.snapOffset + bottomEdge.snapOffset
 
-    property real lastTime: 0
-    property real lastX: 0
-    property real lastY: 0
-    property real velocityX: 0
-    property real velocityY: 0
-    // sample velocity while dragging
-    function sampleVelocity() {
-        if (!dragging) return;
-
-        const now = Date.now();
-        const dt = (now - lastTime) / 1000;
-        if (dt > 1 / 60) {
-            velocityX = (targetX - lastX) / dt;
-            velocityY = (targetY - lastY) / dt;
-            lastX = targetX;
-            lastY = targetY;
-            lastTime = now;
-        }
-    }
-    onDraggingChanged: {
-        momentumTimer.running = !dragging;
-        if (dragging) {
-            lastTime = Date.now();
-            lastX = x;
-            lastY = y;
-            velocityX = 0;
-            velocityY = 0;
-        }
-    }
-    onXChanged: sampleVelocity();
-    onYChanged: sampleVelocity();
     Timer {
         id: momentumTimer
         interval: 1000 / 60
         repeat: true
-        running: false
+        running: root.dragging || !(velocityX === 0 && velocityY === 0)
+
+        property real lastX: 0
+        property real lastY: 0
+        property real velocityX: 0
+        property real velocityY: 0
+
+        onRunningChanged: {
+            if (!running) return;
+
+            // initialize values
+            lastX = root.dragging ? root.targetX : root.x;
+            lastY = root.dragging ? root.targetY : root.y;
+        }
         
         onTriggered: {
-            // sample velocity
-            const dt = interval / 1000;
-            const retention = Math.exp(-dt / root.sampleSmoothingTime);
-            root.velocityX = retention * root.velocityX + (1 - retention) * (root.x - root.lastX) / dt;
-            root.velocityY = retention * root.velocityY + (1 - retention) * (root.y - root.lastY) / dt;
-            root.lastX = root.x;
-            root.lastY = root.y;
+            if (root.dragging) {
+                const dt = interval / 1000;
+                velocityX = (root.targetX - lastX) / dt;
+                velocityY = (root.targetY - lastY) / dt;
+                lastX = root.targetX;
+                lastY = root.targetY;
+            } else {
+                // sample velocity
+                const dt = interval / 1000;
+                const retention = Math.exp(-dt / root.sampleSmoothingTime);
+                velocityX = retention * velocityX + (1 - retention) * (root.x - lastX) / dt;
+                velocityY = retention * velocityY + (1 - retention) * (root.y - lastY) / dt;
+                lastX = root.x;
+                lastY = root.y;
 
-            // momentum calculations
-            const speed = Math.hypot(root.velocityX, root.velocityY);
-            if (speed > 0) {
-                const newSpeed = Math.max(0, speed - root.friction * dt);
-                const scale = newSpeed / speed;
-                root.velocityX *= scale;
-                root.velocityY *= scale;
-            }
-            root.targetX += root.velocityX * dt;
-            root.targetY += root.velocityY * dt;
-            
-            if (speed < 5) {  // px/sec threshold
-                running = false;
-                root.velocityX = 0;
-                root.velocityY = 0;
+                // momentum calculations
+                const speed = Math.hypot(velocityX, velocityY);
+                if (speed > 0) {
+                    const newSpeed = Math.max(0, speed - root.friction * dt);
+                    const scale = newSpeed / speed;
+                    velocityX *= scale;
+                    velocityY *= scale;
+                }
+                root.targetX += velocityX * dt;
+                root.targetY += velocityY * dt;
             }
         }
     }
@@ -240,18 +225,20 @@ Rectangle {
     component OskDragHandler: DragHandler {
         target: null
         enabled: root.allowDragging
-        dragThreshold: 0
+        dragThreshold: 2
         acceptedButtons: Qt.LeftButton | Qt.RightButton
 
         property real rootXAtPress: 0
         property real rootYAtPress: 0
+
+        Component.onCompleted: root.dragHandlers.push(this)
+        Component.onDestruction: root.dragHandlers.splice(root.dragHandlers.indexOf(this), 1)
 
         onActiveChanged: {
             if (active) {
                 rootXAtPress = root.x;
                 rootYAtPress = root.y;
             }
-            root.dragging = active;
         }
 
         onCentroidChanged: {
