@@ -7,23 +7,26 @@ pragma ComponentBehavior: Bound
 
 Item {
     id: root
-    property bool pinned: false
+    property string pinEdge: "" // "top" or "bottom"
     property bool allowDragging: true
     property bool allowPinning: true
     signal hideRequested()
-    signal pinRequested(bool pinned)
+    signal pinEdgeRequested(string pinEdge)
 
     property real snapDistance: 0.02 * Math.min(root.parent.width, root.parent.height)
     property real releaseDistance: 1.5 * snapDistance
     property real snapResistance: 0.8
-    property real sampleSmoothingTime: 0.04 // time constant of blending velocity with sampled data
+    property real sampleSmoothingTime: 0.03 // time constant of blending velocity with sampled data
     property real friction: 150 // how many pixels/second to decrease velocity by per second
 
     property list<var> dragHandlers: []
     property bool dragging: dragHandlers.some(h => h.active)
 
-    property real targetX: (root.parent.width - root.width) / 2
-    property real targetY: (root.parent.height - root.height)
+    property real maxX: root.parent.width - root.width
+    property real maxY: root.parent.height - root.height
+
+    property real targetX: root.maxX / 2
+    property real targetY: root.maxY
 
     Connections {
         target: root.parent
@@ -60,16 +63,20 @@ Item {
         required property real edgeCoordinate
         // lowerSide: true if snapping towards x < snapCoordinate, false if snapping towards x > snapCoordinate
         required property string side // which side to snap to: "lower", "center", "upper" 
-        required property bool enabled
+        property bool enabled: true
+        property bool requireManualUnsnap: false // if true, user must be dragging to unsnap (as opposed to momentum)
 
         property bool snapped: false
         property real snapResistance: !snapped ? 0 : (root.dragging ? root.snapResistance : 1)
         property real snapOffset: (edgeCoordinate - coordinate) * snapResistance
         function updateSnapOffset() {
+            // Don't run if uninitialized
+            if (Math.min(root.width, root.height, root.parent.width, root.parent.height) <= 0) return;
             if (!enabled) {
                 snapped = false;
                 return;
             }
+            if (requireManualUnsnap && !root.dragging) return;
 
             if (!snapped && (
                 side === "center" ? Math.abs(coordinate - edgeCoordinate) < root.snapDistance :
@@ -92,46 +99,48 @@ Item {
         }
     }
 
-    property real maxX: root.parent.width - root.width
     SnapEdge {
         id: leftEdge
-        enabled: root.parent.width > 0 && root.width > 0 && !verticalCenter.snapped
+        enabled: !verticalCenter.snapped
         coordinate: root.targetX
         edgeCoordinate: 0
         side: "lower"
     }
     SnapEdge {
         id: verticalCenter
-        enabled: root.parent.width > 0 && root.width > 0
         coordinate: root.targetX
         edgeCoordinate: root.maxX/2
         side: "center"
     }
     SnapEdge {
         id: rightEdge
-        enabled: root.parent.width > 0 && root.width > 0 && !leftEdge.snapped && !verticalCenter.snapped
+        enabled: !leftEdge.snapped && !verticalCenter.snapped
         coordinate: root.targetX
         edgeCoordinate: root.maxX
         side: "upper"
     }
 
-    property real maxY: root.parent.height - root.height
     SnapEdge {
         id: topEdge
-        enabled: root.parent.height > 0 && root.height > 0
         coordinate: root.targetY
         edgeCoordinate: 0
         side: "lower"
+        requireManualUnsnap: root.pinEdge === "top"
+
+        onSnappedChanged: {
+            if (!snapped && root.pinEdge === "top" && root.dragging) root.pinEdgeRequested("");
+        }
     }
     SnapEdge {
         id: bottomEdge
-        enabled: root.parent.height > 0 && root.height > 0 && !(topEdge.enabled && topEdge.snapped)
+        enabled: !(topEdge.enabled && topEdge.snapped)
         coordinate: root.targetY
         edgeCoordinate: root.maxY
         side: "upper"
+        requireManualUnsnap: root.pinEdge === "bottom"
 
         onSnappedChanged: {
-            if (!snapped && root.pinned && root.dragging) root.pinRequested(false);
+            if (!snapped && root.pinEdge === "bottom" && root.dragging) root.pinEdgeRequested("");
         }
     }
 
@@ -255,42 +264,52 @@ Item {
         anchors.fill: parent
         color: Appearance.colors.colLayer0
         radius: Appearance.rounding.windowRounding
+
+        TapHandler {
+            id: pressHandler
+            acceptedButtons: leftBarDragHandler.acceptedButtons
+        }
+        OskDragHandler {
+            id: leftBarDragHandler
+            grabPermissions: PointerHandler.CanTakeOverFromHandlersOfDifferentType | PointerHandler.ApprovesTakeOverByAnything
+        }
         RowLayout {
             id: oskRowLayout
             anchors {
                 fill: parent
                 margins: root.padding
-                leftMargin: 0
             }
             spacing: root.padding
             RowLayout {
                 anchors {
                     top: parent.top
                     bottom: parent.bottom
-                    topMargin: -root.padding
-                    bottomMargin: -root.padding
                 }
 
                 VerticalButtonGroup {
                     id: controlButtons
                     Layout.fillWidth: true
-                    Layout.leftMargin: root.padding
 
                     OskControlButton { // Pin button
                         visible: root.allowPinning
-                    toggled: root.pinned
+                        toggled: root.pinEdge.length > 0
                         downAction: () => {
-                            if (!root.pinned) {
-                                topEdge.snapped = false;
-                                bottomEdge.snapped = true;
+                            const nextPinEdge = root.pinEdge.length > 0 ? "" : 
+                                                momentumTimer.running ? (momentumTimer.velocityY >= 0 ? "bottom": "top") :
+                                                oskContent.y + root.height / 2 >= root.parent.height / 2 ? "bottom" : "top";
+                            if (nextPinEdge.length > 0) {
+                                topEdge.snapped = nextPinEdge === "top";
+                                bottomEdge.snapped = nextPinEdge === "bottom";
+
+                                momentumTimer.velocityY = 0;
                             }
-                            root.pinRequested(!root.pinned);
+                            root.pinEdgeRequested(nextPinEdge);
                         }
                         contentItem: MaterialSymbol {
                             text: "keep"
                             horizontalAlignment: Text.AlignHCenter
                             iconSize: parent.calculateIconSize()
-                            color: root.pinned ? Appearance.m3colors.m3onPrimary : Appearance.colors.colOnLayer0
+                            color: root.pinEdge.length > 0 ? Appearance.m3colors.m3onPrimary : Appearance.colors.colOnLayer0
                         }
                         onHeightChanged: {
                             contentItem.iconSize = calculateIconSize()
@@ -327,15 +346,6 @@ Item {
                             contentItem.iconSize = calculateIconSize()
                         }
                     }
-                }
-
-                TapHandler {
-                    id: pressHandler
-                    acceptedButtons: leftBarDragHandler.acceptedButtons
-                }
-                OskDragHandler {
-                    id: leftBarDragHandler
-                    grabPermissions: PointerHandler.TakeOverForbidden
                 }
             }
             Rectangle {
