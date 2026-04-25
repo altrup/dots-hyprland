@@ -263,26 +263,31 @@ Item {
         anchors.fill: parent
         color: Appearance.colors.colLayer0
         radius: Appearance.rounding.windowRounding
+
+        TapHandler {
+            id: pressHandler
+            acceptedButtons: leftBarDragHandler.acceptedButtons
+        }
+        OskDragHandler {
+            id: leftBarDragHandler
+            grabPermissions: PointerHandler.CanTakeOverFromHandlersOfDifferentType | PointerHandler.ApprovesTakeOverByAnything
+        }
         RowLayout {
             id: oskRowLayout
             anchors {
                 fill: parent
                 margins: root.padding
-                leftMargin: 0
             }
             spacing: root.padding
             RowLayout {
                 anchors {
                     top: parent.top
                     bottom: parent.bottom
-                    topMargin: -root.padding
-                    bottomMargin: -root.padding
                 }
 
                 VerticalButtonGroup {
                     id: controlButtons
                     Layout.fillWidth: true
-                    Layout.leftMargin: root.padding
 
                     OskControlButton { // Pin button
                         visible: root.allowPinning
@@ -340,15 +345,6 @@ Item {
                             contentItem.iconSize = calculateIconSize()
                         }
                     }
-                }
-
-                TapHandler {
-                    id: pressHandler
-                    acceptedButtons: leftBarDragHandler.acceptedButtons
-                }
-                OskDragHandler {
-                    id: leftBarDragHandler
-                    grabPermissions: PointerHandler.TakeOverForbidden
                 }
             }
             Rectangle {
