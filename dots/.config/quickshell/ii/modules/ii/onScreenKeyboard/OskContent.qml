@@ -63,13 +63,15 @@ Item {
         required property real edgeCoordinate
         // lowerSide: true if snapping towards x < snapCoordinate, false if snapping towards x > snapCoordinate
         required property string side // which side to snap to: "lower", "center", "upper" 
-        required property bool enabled
+        property bool enabled: true
         property bool requireManualUnsnap: false // if true, user must be dragging to unsnap (as opposed to momentum)
 
         property bool snapped: false
         property real snapResistance: !snapped ? 0 : (root.dragging ? root.snapResistance : 1)
         property real snapOffset: (edgeCoordinate - coordinate) * snapResistance
         function updateSnapOffset() {
+            // Don't run if uninitialized
+            if (Math.min(root.width, root.height, root.parent.width, root.parent.height) <= 0) return;
             if (!enabled) {
                 snapped = false;
                 return;
@@ -99,21 +101,20 @@ Item {
 
     SnapEdge {
         id: leftEdge
-        enabled: root.parent.width > 0 && root.width > 0 && !verticalCenter.snapped
+        enabled: !verticalCenter.snapped
         coordinate: root.targetX
         edgeCoordinate: 0
         side: "lower"
     }
     SnapEdge {
         id: verticalCenter
-        enabled: root.parent.width > 0 && root.width > 0
         coordinate: root.targetX
         edgeCoordinate: root.maxX/2
         side: "center"
     }
     SnapEdge {
         id: rightEdge
-        enabled: root.parent.width > 0 && root.width > 0 && !leftEdge.snapped && !verticalCenter.snapped
+        enabled: !leftEdge.snapped && !verticalCenter.snapped
         coordinate: root.targetX
         edgeCoordinate: root.maxX
         side: "upper"
@@ -121,7 +122,6 @@ Item {
 
     SnapEdge {
         id: topEdge
-        enabled: root.parent.height > 0 && root.height > 0
         coordinate: root.targetY
         edgeCoordinate: 0
         side: "lower"
@@ -133,7 +133,7 @@ Item {
     }
     SnapEdge {
         id: bottomEdge
-        enabled: root.parent.height > 0 && root.height > 0 && !(topEdge.enabled && topEdge.snapped)
+        enabled: !(topEdge.enabled && topEdge.snapped)
         coordinate: root.targetY
         edgeCoordinate: root.maxY
         side: "upper"
