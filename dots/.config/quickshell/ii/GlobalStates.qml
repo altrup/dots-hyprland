@@ -11,6 +11,8 @@ Singleton {
     id: root
     property var bars: ({})
     property int barUpdater: 0
+    property var docks: ({})
+    property int dockUpdater: 0
     property bool barOpen: true
     property bool crosshairOpen: false
     property bool sidebarLeftOpen: false
@@ -48,6 +50,16 @@ Singleton {
     function removeBar(screenName, bar) {
         delete bars[screenName];
         barUpdater ++;
+    }
+
+    function addDock(screenName, dock) {
+        docks[screenName] = dock;
+        dockUpdater ++;
+    }
+
+    function removeDock(screenName) {
+        delete docks[screenName];
+        dockUpdater ++;
     }
 
     GlobalShortcut {

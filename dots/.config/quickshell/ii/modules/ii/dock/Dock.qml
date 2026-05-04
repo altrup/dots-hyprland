@@ -49,9 +49,11 @@ Scope {
             // Include in focus grab
             Component.onCompleted: {
                 GlobalFocusGrab.addPersistent(dockRoot);
+                GlobalStates.addDock(screen.name, dockRoot);
             }
             Component.onDestruction: {
                 GlobalFocusGrab.removePersistent(dockRoot);
+                GlobalStates.removeDock(screen.name);
             }
 
             exclusiveZone: root.pinned ? implicitHeight - Appearance.sizes.elevationMargin : 0
