@@ -47,7 +47,7 @@ Singleton {
         barUpdater ++;
     }
 
-    function removeBar(screenName, bar) {
+    function removeBar(screenName) {
         delete bars[screenName];
         barUpdater ++;
     }
