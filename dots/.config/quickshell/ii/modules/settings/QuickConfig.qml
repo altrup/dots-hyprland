@@ -71,8 +71,6 @@ ContentPage {
                 StyledImage {
                     id: wallpaperPreview
                     anchors.fill: parent
-                    sourceSize.width: parent.implicitWidth
-                    sourceSize.height: parent.implicitHeight
                     fillMode: Image.PreserveAspectCrop
                     source: Config.effectiveWallpaperPathSetting
                     cache: false
