@@ -9,6 +9,8 @@ pragma ComponentBehavior: Bound
 
 Singleton {
     id: root
+    property var docks: ({})
+    property int dockUpdater: 0
     property bool barOpen: true
     property bool crosshairOpen: false
     property bool sidebarLeftOpen: false
@@ -36,6 +38,16 @@ Singleton {
             Notifications.timeoutAll();
             Notifications.markAllRead();
         }
+    }
+
+    function addDock(screenName, dock) {
+        docks[screenName] = dock;
+        dockUpdater ++;
+    }
+
+    function removeDock(screenName) {
+        delete docks[screenName];
+        dockUpdater ++;
     }
 
     GlobalShortcut {

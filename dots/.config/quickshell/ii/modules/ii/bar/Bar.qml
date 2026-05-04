@@ -39,6 +39,11 @@ Scope {
 
                 property bool autoHideEnable: window?.fullscreen === 2 || Config?.options.bar.autoHide.enable
 
+                property var dock: {
+                    void(GlobalStates.dockUpdater);
+                    return GlobalStates.docks[screen.name];
+                }
+
                 Timer {
                     id: showBarTimer
                     interval: (Config?.options.bar.autoHide.showWhenPressingSuper.delay ?? 100)
@@ -59,7 +64,7 @@ Scope {
                     }
                 }
                 property bool superShow: false
-                property bool mustShow: (GlobalFocusGrab.enabled || hoverRegion.containsMouse || superShow) && (Config?.options.bar.autoHide.enableOnFullscreen || window?.fullscreen !== 2)
+                property bool mustShow: (GlobalFocusGrab.enabled || dock.reveal || hoverRegion.containsMouse || superShow) && (Config?.options.bar.autoHide.enableOnFullscreen || window?.fullscreen !== 2)
                 exclusionMode: ExclusionMode.Ignore
                 exclusiveZone: (barRoot.autoHideEnable && (!mustShow || (window?.fullscreen !== 2 && !Config?.options.bar.autoHide.pushWindows))) ? 0 :
                     Appearance.sizes.baseBarHeight + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)

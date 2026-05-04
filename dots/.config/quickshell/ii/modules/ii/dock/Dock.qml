@@ -35,6 +35,13 @@ Scope { // Scope
                 right: true
             }
 
+            Component.onCompleted: {
+                GlobalStates.addDock(screen.name, dockRoot);
+            }
+            Component.onDestruction: {
+                GlobalStates.removeDock(screen.name);
+            }
+
             exclusiveZone: root.pinned ? implicitHeight - (Appearance.sizes.hyprlandGapsOut) - (Appearance.sizes.elevationMargin - Appearance.sizes.hyprlandGapsOut) : 0
 
             implicitWidth: dockBackground.implicitWidth
