@@ -21,11 +21,10 @@ Item {
     property list<var> pinnedItems: TrayService.pinnedItems
     property list<var> unpinnedItems: TrayService.unpinnedItems
     onUnpinnedItemsChanged: {
-        if (unpinnedItems.length == 0) root.closeOverflowMenu();
-    }
-
-    function grabFocus() {
-        focusGrab.active = true;
+        if (unpinnedItems.length == 0) {
+            root.trayOverflowOpen = false;
+            root.closeOverflowMenu();
+        }
     }
 
     function setExtraWindowAndGrabFocus(window) {
@@ -35,33 +34,31 @@ Item {
             root.activeMenu = null;
         }
         root.activeMenu = window;
-        root.grabFocus();
-    }
-
-    function releaseFocus() {
-        focusGrab.active = false;
     }
 
     function closeOverflowMenu() {
-        focusGrab.active = false;
-    }
-
-    onTrayOverflowOpenChanged: {
-        if (root.trayOverflowOpen) {
-            root.grabFocus();
+        if (root.activeMenu) {
+            root.activeMenu.close();
+            root.activeMenu = null;
         }
     }
 
-    HyprlandFocusGrab {
-        id: focusGrab
-        active: false
-        windows: [trayOverflowLayout.QsWindow?.window, root.activeMenu]
-        onCleared: {
+    property var oldDismissable: []
+    property var dismissable: root.trayOverflowOpen ? [trayOverflowLayout.QsWindow?.window, root.activeMenu].filter(w => w !== null) : []
+    onDismissableChanged: {
+        root.oldDismissable.forEach(d => {
+            if (root.dismissable.indexOf(d) === -1) GlobalFocusGrab.removeDismissable(d);
+        });
+        root.dismissable.forEach(d => GlobalFocusGrab.addDismissable(d));
+        if (root.dismissable.length === 0) root.closeOverflowMenu();
+        root.oldDismissable = root.dismissable;
+    }
+
+    Connections {
+        target: GlobalFocusGrab
+        function onDismissed() {
             root.trayOverflowOpen = false;
-            if (root.activeMenu) {
-                root.activeMenu.close();
-                root.activeMenu = null;
-            }
+            root.closeOverflowMenu();
         }
     }
 
@@ -121,7 +118,6 @@ Item {
                             item: modelData
                             Layout.fillHeight: !root.vertical
                             Layout.fillWidth: root.vertical
-                            onMenuClosed: root.releaseFocus();
                             onMenuOpened: (qsWindow) => root.setExtraWindowAndGrabFocus(qsWindow);
                         }
                     }
@@ -139,7 +135,6 @@ Item {
                 item: modelData
                 Layout.fillHeight: !root.vertical
                 Layout.fillWidth: root.vertical
-                onMenuClosed: root.releaseFocus();
                 onMenuOpened: (qsWindow) => {
                     root.setExtraWindowAndGrabFocus(qsWindow);
                 }
