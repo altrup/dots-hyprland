@@ -107,6 +107,8 @@ Item {
                 hoverTarget: trayOverflowButton
                 active: root.trayOverflowOpen && root.unpinnedItems.length > 0
 
+                onBackgroundClicked: root.closeOverflowMenu()
+
                 GridLayout {
                     id: trayOverflowLayout
                     anchors.centerIn: parent

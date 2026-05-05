@@ -13,6 +13,8 @@ LazyLoader {
     default property Item contentItem
     property real popupBackgroundMargin: 0
 
+    signal backgroundClicked()
+
     active: hoverTarget && hoverTarget.containsMouse
 
     component: PanelWindow {
@@ -53,6 +55,11 @@ LazyLoader {
         }
         WlrLayershell.namespace: "quickshell:popup"
         WlrLayershell.layer: WlrLayer.Overlay
+
+        TapHandler {
+            target: popupBackground
+            onTapped: root.backgroundClicked()
+        }
 
         StyledRectangularShadow {
             target: popupBackground
