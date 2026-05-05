@@ -17,6 +17,14 @@ Item {
     property bool showSeparator: true
     property bool showOverflowMenu: true
     property var activeMenu: null
+    onActiveMenuChanged: {
+        if (activeMenu) {
+            const menu = activeMenu;
+            menu.Component.destruction.connect(() => {
+                if (root.activeMenu === menu) root.activeMenu = null;
+            });
+        }
+    }
 
     property list<var> pinnedItems: TrayService.pinnedItems
     property list<var> unpinnedItems: TrayService.unpinnedItems
@@ -28,30 +36,26 @@ Item {
     }
 
     function setExtraWindowAndGrabFocus(window) {
-        if (root.activeMenu && root.activeMenu !== window) {
-            if (typeof root.activeMenu.close === "function")
-                root.activeMenu.close();
-            root.activeMenu = null;
-        }
+        root.closeOverflowMenu();
         root.activeMenu = window;
     }
 
     function closeOverflowMenu() {
         if (root.activeMenu) {
-            root.activeMenu.close();
+            if (typeof root.activeMenu.close === "function")
+                root.activeMenu.close();
             root.activeMenu = null;
         }
     }
 
     property var oldDismissable: []
-    property var dismissable: root.trayOverflowOpen ? [trayOverflowLayout.QsWindow?.window, root.activeMenu].filter(w => w !== null) : []
+    property var dismissable: root.trayOverflowOpen ? [trayOverflowLayout.QsWindow?.window, root.activeMenu].filter(Boolean) : []
     onDismissableChanged: {
         root.oldDismissable.forEach(d => {
             if (root.dismissable.indexOf(d) === -1) GlobalFocusGrab.removeDismissable(d);
         });
         root.dismissable.forEach(d => GlobalFocusGrab.addDismissable(d));
-        if (root.dismissable.length === 0) root.closeOverflowMenu();
-        root.oldDismissable = root.dismissable;
+        root.oldDismissable = root.dismissable.slice();
     }
 
     Connections {
