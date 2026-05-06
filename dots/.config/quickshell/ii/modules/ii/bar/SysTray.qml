@@ -17,6 +17,10 @@ Item {
     property bool showSeparator: true
     property bool showOverflowMenu: true
     property var activeMenu: null
+
+    onTrayOverflowOpenChanged: {
+        if (!trayOverflowOpen) root.closeOverflowMenu();
+    }
     onActiveMenuChanged: {
         if (activeMenu) {
             const menu = activeMenu;
@@ -31,7 +35,6 @@ Item {
     onUnpinnedItemsChanged: {
         if (unpinnedItems.length == 0) {
             root.trayOverflowOpen = false;
-            root.closeOverflowMenu();
         }
     }
 
@@ -62,7 +65,6 @@ Item {
         target: GlobalFocusGrab
         function onDismissed() {
             root.trayOverflowOpen = false;
-            root.closeOverflowMenu();
         }
     }
 
