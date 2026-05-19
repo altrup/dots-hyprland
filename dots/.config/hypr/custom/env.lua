@@ -1,1 +1,1 @@
-
+hl.env("QT_IM_MODULE", "fcitx")

@@ -34,7 +34,7 @@ end
 
 -- nwg-displays support: re-add the files if it updates later
 -- require("workspaces")
--- require("monitors")
+require("monitors")
 
 -- Shell overrides --
 require("hyprland.shellOverrides.main")
