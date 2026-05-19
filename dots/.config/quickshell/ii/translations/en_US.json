@@ -615,6 +615,7 @@
   "Pin": "Pin",
   "Unpin": "Unpin",
   "Auto-Rotate": "Auto-Rotate",
+
   "Auto-Rotate | Requires iio-hyprland": "Auto-Rotate | Requires iio-hyprland",
   "Size": "Size"
 }
