@@ -186,7 +186,7 @@ Rectangle {
                                 } else {
                                     root.draggingWindow = false;
                                     if (root.hoveredWorkspace !== null && root.hoveredWorkspace.workspace !== windowItem.hyprlandClient.workspace.id) {
-                                        Hyprland.dispatch(`movetoworkspacesilent ${root.hoveredWorkspace.workspace}, address:${windowItem.hyprlandClient.address}`);
+                                        Hyprland.dispatch(`hl.dsp.window.move({ workspace = ${root.hoveredWorkspace.workspace}, follow = false, window = "address:${windowItem.hyprlandClient.address}" })`)
                                     } else {
                                         windowItem.openedX = 0;
                                         windowItem.openedY = 0;
@@ -231,7 +231,7 @@ Rectangle {
             anchors.fill: parent
             anchors.margins: wsBorder.border.width
             radius: wsBorder.radius - wsBorder.border.width
-            color: Looks.colors.bgPanelFooterBase
+            color: Looks.colors.bgPanelFooterBackground
 
             implicitHeight: 174
 
@@ -292,7 +292,7 @@ Rectangle {
                     onClicked: {
                         GlobalStates.overviewOpen = false;
                         root.closed(); // Close immediately to avoid weird animations
-                        Hyprland.dispatch(`workspace ${workspaceItem.workspace}`);
+                        Hyprland.dispatch(`hl.dsp.focus({workspace = ${workspaceItem.workspace}})`);
                     }
                 }
             }

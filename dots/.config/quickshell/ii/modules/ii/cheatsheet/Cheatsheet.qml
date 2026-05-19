@@ -46,21 +46,24 @@ Scope { // Scope
             implicitWidth: cheatsheetBackground.width + Appearance.sizes.elevationMargin * 2
             implicitHeight: cheatsheetBackground.height + Appearance.sizes.elevationMargin * 2
             WlrLayershell.namespace: "quickshell:cheatsheet"
-            // Hyprland 0.49: Focus is always exclusive and setting this breaks mouse focus grab
-            // WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+            // Setting this value makes it take its sweet time to open
+            // WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
             color: "transparent"
 
             mask: Region {
                 item: cheatsheetBackground
             }
 
-            HyprlandFocusGrab { // Click outside to close
-                id: grab
-                windows: [cheatsheetRoot]
-                active: cheatsheetRoot.visible
-                onCleared: () => {
-                    if (!active)
-                        cheatsheetRoot.hide();
+            Component.onCompleted: {
+                GlobalFocusGrab.addDismissable(cheatsheetRoot);
+            }
+            Component.onDestruction: {
+                GlobalFocusGrab.removeDismissable(cheatsheetRoot);
+            }
+            Connections {
+                target: GlobalFocusGrab
+                function onDismissed() {
+                    cheatsheetRoot.hide();
                 }
             }
 
