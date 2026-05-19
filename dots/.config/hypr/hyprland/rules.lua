@@ -162,6 +162,7 @@ hl.layer_rule({ match = { namespace = "quickshell:osk" }, order = -1})
 hl.layer_rule({ match = { namespace = "quickshell:dock" }, order = -2})
 hl.layer_rule({ match = { namespace = "quickshell:session" }, order = -3})
 hl.layer_rule({ match = { namespace = "quickshell:regionSelector" }, order = -4})
+hl.layer_rule({ match = { namespace = "quickshell:screenCorners" }, order = -5})
 -- Quickshell: waffles
 hl.layer_rule({ match = { namespace = "quickshell:wallpaperSelector" }, animation = "slide top"})
 hl.layer_rule({ match = { namespace = "quickshell:wNotificationCenter" }, no_anim = true})
