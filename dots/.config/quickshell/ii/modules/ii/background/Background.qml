@@ -205,10 +205,6 @@ Variants {
                         easing.type: Easing.OutCubic
                     }
                 }
-                sourceSize {
-                    width: bgRoot.scaledWallpaperWidth * bgRoot.screen.devicePixelRatio
-                    height: bgRoot.scaledWallpaperHeight * bgRoot.screen.devicePixelRatio
-                }
                 width: bgRoot.scaledWallpaperWidth
                 height: bgRoot.scaledWallpaperHeight
             }
