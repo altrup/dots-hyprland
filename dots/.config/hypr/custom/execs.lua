@@ -1,5 +1,5 @@
 hl.on("hyprland.start", function()
     hl.exec_cmd("fcitx5")
     hl.exec_cmd("hyprpm reload")
-    hl.exec_cmd("nm-applet --indicator")
+    hl.exec_cmd("sleep 2 && nm-applet --indicator")
 end)
