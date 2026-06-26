@@ -25,96 +25,151 @@ hl.device({
     sensitivity = -0.6,
 })
 
--- TODO: CONVERT HYPRGRASS
 -- # Hyprgrass
--- plugin {
---     touch_gestures {
---         # The default sensitivity is probably too low on tablet screens,
---         # I recommend turning it up to 4.0
---         sensitivity = 5.0
+hl.config({
+    plugin = {
+        hyprgrass = {
+            sensitivity = 5.0,
+            long_press_delay = 500,
+            resize_on_border_long_press = true,
+            edge_margin = 10,
+        },
+    },
+})
 
---         # in milliseconds
---         long_press_delay = 500
+-- tap with 2 fingers
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "tap", fingers = 2},
+    action = hl.dsp.exec_cmd("ydotool click 0xC1"),
+}
 
---         # emulates touchpad swipes when swiping in a direction that does not trigger
---         # workspace swipe. ONLY triggers when finger count is equal to
---         # workspace_swipe_fingers.
---         #
---         # might be removed in the future in favor of event hooks
---         emulate_touchpad_swipe = false
+-- tap with 3 fingers
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "tap", fingers = 3},
+    action = hl.dsp.global("quickshell:oskToggle"),
+}
 
---         # tap with 2 fingers
---         hyprgrass-bind = , tap:2, exec, ydotool click 0xC1
+-- ==== Window Management ====
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "longpress", fingers = 2},
+    mouse = true,
+    action = hl.dsp.window.drag(),
+}
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "longpress", fingers = 3},
+    mouse = true,
+    action = hl.dsp.window.resize(),
+}
 
---         # tap with 3 fingers
---         hyprgrass-bind = , tap:3, global, quickshell:oskToggle
+-- swipe left/right with 3 fingers
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "swipe", fingers = 3, direction = "right"},
+    action = hl.dsp.window.fullscreen(0),
+}
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "swipe", fingers = 3, direction = "left"},
+    action = hl.dsp.window.fullscreen(1),
+}
 
+-- swipe up with 3 fingers
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "swipe", fingers = 3, direction = "up"},
+    action = hl.dsp.window.float(),
+}
 
---         # ==== Window Management ====
---         resize_on_border_long_press = true
+-- swipe down with 3 fingers
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "swipe", fingers = 3, direction = "down"},
+    action = hl.dsp.window.close(),
+}
 
---         hyprgrass-bindm = , longpress:2, movewindow
---         hyprgrass-bindm = , longpress:3, resizewindow
+-- ==== Workspace Management ====
+-- swipe up/down with 5 fingers: toggle scratchpad
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "swipe", fingers = 5, direction = "up"},
+    action = hl.dsp.exec_cmd("~/.config/hypr/hyprland/scripts/workspace_action.sh openspecialworkspace"),
+}
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "swipe", fingers = 5, direction = "down"},
+    action = hl.dsp.exec_cmd("~/.config/hypr/hyprland/scripts/workspace_action.sh closespecialworkspace"),
+}
 
---         # in pixels, the distance from the edge that is considered an edge
---         edge_margin = 10
+-- swipe up/down with 4 fingers: send to/off scratchpad
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "swipe", fingers = 4, direction = "up"},
+    action = hl.dsp.window.move({ workspace = "e+0" }),
+}
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "swipe", fingers = 4, direction = "down"},
+    action = hl.dsp.window.move({ workspace = "special" }),
+}
 
---         # swipe left/right with 3 fingers
---         hyprgrass-bind = , swipe:3:r, fullscreen, 0
---         hyprgrass-bind = , swipe:3:l, fullscreen, 1
+-- swipe left/right with 4 fingers: send to neighboring workspace
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "swipe", fingers = 4, direction = "left"},
+    action = hl.dsp.window.move({ workspace = "r-1" }),
+}
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "swipe", fingers = 4, direction = "right"},
+    action = hl.dsp.window.move({ workspace = "r+1" }),
+}
 
---         # swipe up with 3 fingers
---         # hyprgrass-gesture = swipe, 3, up, float
---         hyprgrass-bind = , swipe:3:u, togglefloating
+-- swipe towards center from left/right edge: switch workspace
+hl.plugin.hyprgrass.gesture {
+    pattern = {kind = "edge", origin = "left", direction = "horizontal"},
+    action = "workspace",
+}
+hl.plugin.hyprgrass.gesture {
+    pattern = {kind = "edge", origin = "right", direction = "horizontal"},
+    action = "workspace",
+}
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "edge", origin = "left", direction = "right"},
+    action = hl.dsp.focus({ workspace = "r-1" }),
+}
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "edge", origin = "right", direction = "left"},
+    action = hl.dsp.focus({ workspace = "r+1" }),
+}
 
---         # swipe down with 3 fingers
---         # hyprgrass-gesture = swipe, 3, down, close
---         hyprgrass-bind = , swipe:3:d, killactive
+-- swipe down from top edge: toggle search
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "edge", origin = "up", direction = "down"},
+    action = hl.dsp.exec_cmd("qs -c $qsConfig ipc call search toggle"),
+}
 
+-- swipe from top edge horizontally: switch workspace
+hl.plugin.hyprgrass.gesture {
+    pattern = {kind = "edge", origin = "up", direction = "horizontal"},
+    action = "workspace",
+}
 
---         # ==== Workspace Management ====
---         workspace_swipe_fingers = 5
+-- swipe up from bottom edge: toggle scratchpad
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "edge", origin = "down", direction = "up"},
+    action = hl.dsp.workspace.toggle_special("special"),
+}
 
---         # swipe down/up with 5 fingers: toggle scratchpad
---         # hyprgrass-gesture = swipe, 5, vertical, special, special
---         hyprgrass-bind = , swipe:5:u, exec, ~/.config/hypr/hyprland/scripts/workspace_action.sh openspecialworkspace
---         hyprgrass-bind = , swipe:5:d, exec, ~/.config/hypr/hyprland/scripts/workspace_action.sh closespecialworkspace
+-- ==== App Management ====
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "edge", origin = "left", direction = "up"},
+    action = hl.dsp.exec_cmd(browser),
+}
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "edge", origin = "left", direction = "down"},
+    action = hl.dsp.exec_cmd(textEditor),
+}
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "edge", origin = "right", direction = "up"},
+    action = hl.dsp.exec_cmd(fileManager),
+}
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "edge", origin = "right", direction = "down"},
+    action = hl.dsp.exec_cmd(terminal),
+}
 
---         # swipe down/up with 4 fingers: send to/off scratchpad
---         hyprgrass-bind = , swipe:4:u, movetoworkspace, e+0
---         hyprgrass-bind = , swipe:4:d, movetoworkspace, special
-
---         # swipe left/right with 4 fingers: send to neighboring workspace
---         hyprgrass-bind = , swipe:4:l, movetoworkspace, r-1
---         hyprgrass-bind = , swipe:4:r, movetoworkspace, r+1
-
---         # swipe towards center from left/right edge: switch workspace
---         hyprgrass-gesture = edge, left, horizontal, workspace
---         hyprgrass-gesture = edge, right, horizontal, workspace
---         hyprgrass-bind = , edge:l:r, workspace, -1
---         hyprgrass-bind = , edge:r:l, workspace, +1
-
---         # swipe down from top edge: toggle search
---         hyprgrass-bind = , edge:u:d, exec, qs -c $qsConfig ipc call search toggle
-
---         workspace_swipe_edge = d
---         hyprgrass-gesture = edge, top, horizontal, workspace
-
---         # swipe up from bottom edge: toggle scratchpad
---         hyprgrass-bind = , edge:d:u, togglespecialworkspace
-
-
---         # ==== App Management ====
---         # edge swipes
---         hyprgrass-bind = , edge:l:u, exec, zen
---         hyprgrass-bind = , edge:l:d, exec, kate
---         hyprgrass-bind = , edge:r:u, exec, dolphin
---         hyprgrass-bind = , edge:r:d, exec, kitty -1
-
---         # tap with 3 fingers
---         # hyprgrass-bind = , tap:3, exec, hyprctl dispatch 'quickshell:searchToggleRelease'
-
---         # pinch in with 3 fingers
---         # hyprgrass-bind = , pinch:3:i, exec, foot
---     }
+-- pinch in with 3 fingers
+-- hl.plugin.hyprgrass.bind {
+--     pattern = {kind = "pinch", fingers = 3, direction = "pinchin"},
+--     action = hl.dsp.exec_cmd("foot"),
 -- }
