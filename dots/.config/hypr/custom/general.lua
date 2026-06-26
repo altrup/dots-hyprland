@@ -62,36 +62,40 @@ hl.plugin.hyprgrass.bind {
 }
 
 -- swipe left/right with 3 fingers
-hl.plugin.hyprgrass.bind {
+hl.plugin.hyprgrass.gesture {
     pattern = {kind = "swipe", fingers = 3, direction = "right"},
-    action = hl.dsp.window.fullscreen(0),
+    action = "fullscreen",
 }
-hl.plugin.hyprgrass.bind {
+hl.plugin.hyprgrass.gesture {
     pattern = {kind = "swipe", fingers = 3, direction = "left"},
-    action = hl.dsp.window.fullscreen(1),
+    action = "fullscreen",
+    mode = "maximize",
 }
 
 -- swipe up with 3 fingers
-hl.plugin.hyprgrass.bind {
+hl.plugin.hyprgrass.gesture {
     pattern = {kind = "swipe", fingers = 3, direction = "up"},
-    action = hl.dsp.window.float(),
+    action = "float",
 }
 
 -- swipe down with 3 fingers
-hl.plugin.hyprgrass.bind {
+hl.plugin.hyprgrass.gesture {
     pattern = {kind = "swipe", fingers = 3, direction = "down"},
-    action = hl.dsp.window.close(),
+    action = "close",
 }
 
 -- ==== Workspace Management ====
 -- swipe up/down with 5 fingers: toggle scratchpad
-hl.plugin.hyprgrass.bind {
-    pattern = {kind = "swipe", fingers = 5, direction = "up"},
-    action = hl.dsp.exec_cmd("~/.config/hypr/hyprland/scripts/workspace_action.sh openspecialworkspace"),
+hl.plugin.hyprgrass.gesture {
+    pattern = {kind = "swipe", fingers = 5, direction = "vertical"},
+    action = "special",
+    workspace_name = "special",
 }
-hl.plugin.hyprgrass.bind {
-    pattern = {kind = "swipe", fingers = 5, direction = "down"},
-    action = hl.dsp.exec_cmd("~/.config/hypr/hyprland/scripts/workspace_action.sh closespecialworkspace"),
+
+-- swipe left/right with 5 fingers: switch workspace
+hl.plugin.hyprgrass.gesture {
+    pattern = {kind = "swipe", fingers = 5, direction = "horizontal"},
+    action = "workspace",
 }
 
 -- swipe up/down with 4 fingers: send to/off scratchpad
@@ -148,6 +152,12 @@ hl.plugin.hyprgrass.gesture {
 hl.plugin.hyprgrass.bind {
     pattern = {kind = "edge", origin = "down", direction = "up"},
     action = hl.dsp.workspace.toggle_special("special"),
+}
+
+-- swipe horizontally along bottom edge: switch workspace
+hl.plugin.hyprgrass.gesture {
+    pattern = {kind = "edge", origin = "down", direction = "horizontal"},
+    action = "workspace",
 }
 
 -- ==== App Management ====
