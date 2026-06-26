@@ -61,18 +61,25 @@ hl.plugin.hyprgrass.bind {
     action = hl.dsp.window.resize(),
 }
 
--- swipe left/right with 3 fingers
+-- swipe right with 3 fingers: fullscreen
 hl.plugin.hyprgrass.gesture {
     pattern = {kind = "swipe", fingers = 3, direction = "right"},
     action = "fullscreen",
 }
-hl.plugin.hyprgrass.gesture {
-    pattern = {kind = "swipe", fingers = 3, direction = "left"},
-    action = "fullscreen",
-    mode = "maximize",
-}
 
--- swipe up with 3 fingers
+-- swipe left with 3 fingers: maximize
+hl.plugin.hyprgrass.bind {
+    pattern = {kind = "swipe", fingers = 3, direction = "left"},
+    action = hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }),
+}
+-- hl.plugin.hyprgrass.gesture {
+--     pattern = {kind = "swipe", fingers = 3, direction = "left"},
+--     action = "fullscreen",
+--     mode = "maximize",
+-- }
+-- doesn't work rn for some reason
+
+-- swipe up with 3 fingers: float
 hl.plugin.hyprgrass.gesture {
     pattern = {kind = "swipe", fingers = 3, direction = "up"},
     action = "float",
@@ -177,9 +184,3 @@ hl.plugin.hyprgrass.bind {
     pattern = {kind = "edge", origin = "right", direction = "down"},
     action = hl.dsp.exec_cmd(terminal),
 }
-
--- pinch in with 3 fingers
--- hl.plugin.hyprgrass.bind {
---     pattern = {kind = "pinch", fingers = 3, direction = "pinchin"},
---     action = hl.dsp.exec_cmd("foot"),
--- }
