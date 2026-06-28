@@ -112,7 +112,7 @@ hl.plugin.hyprgrass.bind {
 }
 hl.plugin.hyprgrass.bind {
     pattern = {kind = "swipe", fingers = 4, direction = "down"},
-    action = hl.dsp.window.move({ workspace = "special" }),
+    action = hl.dsp.window.move({ workspace = "special:special" }),
 }
 
 -- swipe left/right with 4 fingers: send to neighboring workspace

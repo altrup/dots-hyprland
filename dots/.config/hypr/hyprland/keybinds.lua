@@ -237,6 +237,8 @@ for i = 1, 4 do
     local prefix = { "r+", "r-", "r+", "r-" }
     hl.bind(keycombos[i], hl.dsp.window.move({ workspace = prefix[i] .. "1" })) -- # [hidden]
 end
+hl.bind("CTRL + SUPER + SHIFT + Down", hl.dsp.window.move({ workspace = "special:special" })) -- # [hidden]
+hl.bind("CTRL + SUPER + SHIFT + Up", hl.dsp.window.move({ workspace = "e+0" })) -- # [hidden]
 
 hl.bind("SUPER + ALT + S",
     hl.dsp.window.move({ workspace = "special:special", follow = false }), { description = "Window: Send to scratchpad" })
