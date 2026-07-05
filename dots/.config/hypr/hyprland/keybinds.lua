@@ -216,21 +216,31 @@ for i = 1, 10 do
     end)
 end
 
---# #/# bind = SUPER+ALT, Scroll ↑/↓,, -- Send to workspace left/right
+--# #/# bind = CTRL+SUPER, Scroll ↑/↓,, -- Send to workspace left/right
 for i = 1, 2 do
-    local key = "SUPER + ALT + mouse_"
+    local key = "CTRL + SUPER + mouse_"
     local keycombos = { key .. "down", key .. "up" }
     local prefix = { "r-", "r+" }
     hl.bind(keycombos[i], hl.dsp.window.move({ workspace = prefix[i] .. "1" }))
 end
 
---# #/# bind = SUPER+ALT+SHIFT, Scroll ↑/↓,, -- Send to/from scratchpad
-hl.bind("SUPER + ALT + SHIFT + mouse_down", hl.dsp.window.move({ workspace = "e+0" }),
-    { description = "Window: Send back from scratchpad" })
-hl.bind("SUPER + ALT + SHIFT + mouse_up", hl.dsp.window.move({ workspace = "special:special" }),
-    { description = "Window: Send to scratchpad" })
+--# #/# bind = CTRL+SUPER+ALT, Scroll ↑/↓,, -- Send to active workspace left/right
+for i = 1, 2 do
+    local key = "CTRL + SUPER + ALT + mouse_"
+    local keycombos = { key .. "down", key .. "up" }
+    local prefix = { "m-", "m+" }
+    hl.bind(keycombos[i], hl.dsp.window.move({ workspace = prefix[i] .. "1" }))
+end
 
---# #/# bind = SUPER+SHIFT / CTRL+SUPER+SHIFT, Scroll ↑/↓,, -- Open/close scratchpad
+--# #/# bind = CTRL+SUPER+SHIFT / CTRL+SUPER+ALT+SHIFT, Scroll ↑/↓,, -- Send to/from scratchpad
+hl.bind("CTRL + SUPER + SHIFT + mouse_down", hl.dsp.window.move({ workspace = "e+0" }),
+    { description = "Window: Send back from scratchpad" })
+hl.bind("CTRL + SUPER + SHIFT + mouse_up", hl.dsp.window.move({ workspace = "special:special" }),
+    { description = "Window: Send to scratchpad" })
+hl.bind("CTRL + SUPER + ALT + SHIFT + mouse_down", hl.dsp.window.move({ workspace = "e+0" }))
+hl.bind("CTRL + SUPER + ALT + SHIFT + mouse_up", hl.dsp.window.move({ workspace = "special:special" }))
+
+--# #/# bind = SUPER+SHIFT / SUPER+ALT+SHIFT, Scroll ↑/↓,, -- Open/close scratchpad
 local function is_scratchpad_open()
     for _, m in ipairs(hl.get_monitors()) do
         if m.focused then
@@ -240,7 +250,7 @@ local function is_scratchpad_open()
     return false
 end
 for i = 1, 2 do
-    local mod = { "SUPER + SHIFT + mouse_", "CTRL + SUPER + SHIFT + mouse_" }
+    local mod = { "SUPER + SHIFT + mouse_", "SUPER + ALT + SHIFT + mouse_" }
     hl.bind(mod[i] .. "down", function()
         if not is_scratchpad_open() then hl.dispatch(hl.dsp.workspace.toggle_special("special")) end
     end, { description = "Workspace: Open scratchpad" })
@@ -313,10 +323,10 @@ for i = 1, 4 do
     hl.bind(keycombos[i], hl.dsp.focus({ workspace = prefix[i] .. "1" }))
 end
 --#/# bind = SUPER, Scroll ↑/↓,, -- Focus left/right
+--#/# bind = SUPER+ALT, Scroll ↑/↓,, -- Focus active workspace left/right
 for i = 1, 4 do
-    local key = { "SUPER + mouse_up", "SUPER + mouse_down" }
-    local keycombos = { key[1], key[2], "CTRL + " .. key[1], "CTRL + " .. key[2] }
-    local prefix = { "+", "-", "r+", "r-" }
+    local keycombos = { "SUPER + mouse_up", "SUPER + mouse_down", "SUPER + ALT + mouse_up", "SUPER + ALT + mouse_down" }
+    local prefix = { "+", "-", "m+", "m-" }
     hl.bind(keycombos[i], hl.dsp.focus({ workspace = prefix[i] .. "1" }))
 end
 --## Special
