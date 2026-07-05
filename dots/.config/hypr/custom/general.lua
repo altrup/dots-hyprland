@@ -24,6 +24,10 @@ hl.device({
     name = "logitech-g305-1",
     sensitivity = -0.6,
 })
+hl.device({
+    name = "input-remapper-logitech-g305-forwarded-1",
+    sensitivity = -0.6,
+})
 
 -- # Hyprgrass
 hl.config({
