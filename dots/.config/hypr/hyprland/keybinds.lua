@@ -150,7 +150,6 @@ hl.bind("SUPER + ALT + M", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_SOURCE@ togg
 --##! Window
 --# Focusing
 hl.bind("SUPER + mouse:272", hl.dsp.window.drag(), { mouse = true, description = "Window: Move" })
-hl.bind("SUPER + mouse:274", hl.dsp.window.drag(), { mouse = true })
 hl.bind("SUPER + mouse:273", hl.dsp.window.resize(), { mouse = true, description = "Window: Resize" })
 --#/# bind = SUPER + ←/↑/→/↓,, -- Focus in direction
 for i = 1, 4 do
@@ -223,7 +222,6 @@ for i = 1, 2 do
     local prefix = { "r-", "r+" }
     hl.bind(keycombos[i], hl.dsp.window.move({ workspace = prefix[i] .. "1" }))
 end
-
 --# #/# bind = CTRL+SUPER+ALT, Scroll ↑/↓,, -- Send to active workspace left/right
 for i = 1, 2 do
     local key = "CTRL + SUPER + ALT + mouse_"
@@ -231,7 +229,6 @@ for i = 1, 2 do
     local prefix = { "m-", "m+" }
     hl.bind(keycombos[i], hl.dsp.window.move({ workspace = prefix[i] .. "1" }))
 end
-
 --# #/# bind = CTRL+SUPER+SHIFT / CTRL+SUPER+ALT+SHIFT, Scroll ↑/↓,, -- Send to/from scratchpad
 hl.bind("CTRL + SUPER + SHIFT + mouse_down", hl.dsp.window.move({ workspace = "e+0" }),
     { description = "Window: Send back from scratchpad" })
@@ -240,7 +237,23 @@ hl.bind("CTRL + SUPER + SHIFT + mouse_up", hl.dsp.window.move({ workspace = "spe
 hl.bind("CTRL + SUPER + ALT + SHIFT + mouse_down", hl.dsp.window.move({ workspace = "e+0" }))
 hl.bind("CTRL + SUPER + ALT + SHIFT + mouse_up", hl.dsp.window.move({ workspace = "special:special" }))
 
---# #/# bind = SUPER+SHIFT / SUPER+ALT+SHIFT, Scroll ↑/↓,, -- Open/close scratchpad
+-- Holding SUPER + mouse:274 (middle-click) repurposes the plain SUPER(+ALT
+-- /SHIFT)+scroll binds below from focus/scratchpad-toggle into sending the
+-- window instead, mirroring the CTRL+SUPER(+ALT/SHIFT)+scroll binds above.
+-- A submap was tried first, but neither mouse:274's release nor SUPER's
+-- release reliably reach a bind scoped inside a submap (verified with
+-- simulated input), so state is tracked with a plain flag in the default
+-- map instead, where press/release binding is proven reliable.
+-- Bind matching requires an exact modmask, so SHIFT/ALT held at the moment
+-- of the middle-click press (e.g. going straight for the scratchpad variant)
+-- needs its own explicit entry, same as CTRL+SUPER(+ALT)(+SHIFT) above.
+local midClickHeld = false
+for _, mod in ipairs({ "SUPER + ", "SUPER + ALT + ", "SUPER + SHIFT + ", "SUPER + ALT + SHIFT + " }) do
+    hl.bind(mod .. "mouse:274", function() midClickHeld = true end, { non_consuming = true })
+end
+hl.bind("SUPER + mouse:274", function() midClickHeld = false end,
+    { non_consuming = true, release = true, ignore_mods = true })
+
 local function is_scratchpad_open()
     for _, m in ipairs(hl.get_monitors()) do
         if m.focused then
@@ -249,13 +262,24 @@ local function is_scratchpad_open()
     end
     return false
 end
+
+--#/# bind = SUPER+SHIFT / SUPER+ALT+SHIFT, Scroll ↑/↓,, -- Open/close scratchpad
+--#/# bind = SUPER + mouse:274 (hold) + SHIFT, Scroll ↑/↓,, -- Send to/from scratchpad
 for i = 1, 2 do
     local mod = { "SUPER + SHIFT + mouse_", "SUPER + ALT + SHIFT + mouse_" }
     hl.bind(mod[i] .. "down", function()
-        if not is_scratchpad_open() then hl.dispatch(hl.dsp.workspace.toggle_special("special")) end
+        if midClickHeld then
+            hl.dispatch(hl.dsp.window.move({ workspace = "e+0" }))
+        elseif not is_scratchpad_open() then
+            hl.dispatch(hl.dsp.workspace.toggle_special("special"))
+        end
     end, { description = "Workspace: Open scratchpad" })
     hl.bind(mod[i] .. "up", function()
-        if is_scratchpad_open() then hl.dispatch(hl.dsp.workspace.toggle_special("special")) end
+        if midClickHeld then
+            hl.dispatch(hl.dsp.window.move({ workspace = "special:special" }))
+        elseif is_scratchpad_open() then
+            hl.dispatch(hl.dsp.workspace.toggle_special("special"))
+        end
     end, { description = "Workspace: Close scratchpad" })
 end
 
@@ -324,10 +348,18 @@ for i = 1, 4 do
 end
 --#/# bind = SUPER, Scroll ↑/↓,, -- Focus left/right
 --#/# bind = SUPER+ALT, Scroll ↑/↓,, -- Focus active workspace left/right
+--#/# bind = SUPER + mouse:274 (hold), Scroll ↑/↓,, -- Send to workspace left/right
+--#/# bind = SUPER + mouse:274 (hold) + ALT, Scroll ↑/↓,, -- Send to active workspace left/right
 for i = 1, 4 do
     local keycombos = { "SUPER + mouse_up", "SUPER + mouse_down", "SUPER + ALT + mouse_up", "SUPER + ALT + mouse_down" }
     local prefix = { "+", "-", "m+", "m-" }
-    hl.bind(keycombos[i], hl.dsp.focus({ workspace = prefix[i] .. "1" }))
+    hl.bind(keycombos[i], function()
+        if midClickHeld then
+            hl.dispatch(hl.dsp.window.move({ workspace = prefix[i] .. "1" }))
+        else
+            hl.dispatch(hl.dsp.focus({ workspace = prefix[i] .. "1" }))
+        end
+    end)
 end
 --## Special
 hl.bind("SUPER + S", hl.dsp.workspace.toggle_special("special"), { description = "Workspace: Toggle scratchpad" })
