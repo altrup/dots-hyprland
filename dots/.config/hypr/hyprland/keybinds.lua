@@ -237,16 +237,6 @@ hl.bind("CTRL + SUPER + SHIFT + mouse_up", hl.dsp.window.move({ workspace = "spe
 hl.bind("CTRL + SUPER + ALT + SHIFT + mouse_down", hl.dsp.window.move({ workspace = "e+0" }))
 hl.bind("CTRL + SUPER + ALT + SHIFT + mouse_up", hl.dsp.window.move({ workspace = "special:special" }))
 
--- Holding SUPER + mouse:274 (middle-click) repurposes the plain SUPER(+ALT
--- /SHIFT)+scroll binds below from focus/scratchpad-toggle into sending the
--- window instead, mirroring the CTRL+SUPER(+ALT/SHIFT)+scroll binds above.
--- A submap was tried first, but neither mouse:274's release nor SUPER's
--- release reliably reach a bind scoped inside a submap (verified with
--- simulated input), so state is tracked with a plain flag in the default
--- map instead, where press/release binding is proven reliable.
--- Bind matching requires an exact modmask, so SHIFT/ALT held at the moment
--- of the middle-click press (e.g. going straight for the scratchpad variant)
--- needs its own explicit entry, same as CTRL+SUPER(+ALT)(+SHIFT) above.
 local midClickHeld = false
 for _, mod in ipairs({ "SUPER + ", "SUPER + ALT + ", "SUPER + SHIFT + ", "SUPER + ALT + SHIFT + " }) do
     hl.bind(mod .. "mouse:274", function() midClickHeld = true end, { non_consuming = true })
