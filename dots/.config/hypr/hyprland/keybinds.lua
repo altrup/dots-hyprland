@@ -237,12 +237,31 @@ hl.bind("CTRL + SUPER + SHIFT + mouse_up", hl.dsp.window.move({ workspace = "spe
 hl.bind("CTRL + SUPER + ALT + SHIFT + mouse_down", hl.dsp.window.move({ workspace = "e+0" }))
 hl.bind("CTRL + SUPER + ALT + SHIFT + mouse_up", hl.dsp.window.move({ workspace = "special:special" }))
 
+-- Own dummy key ("CTRL + mouse:274") so hl.unbind (which nukes all binds on a
+-- key regardless of press/release) can retarget this without hitting the entry binds.
 local midClickHeld = false
-for _, mod in ipairs({ "SUPER + ", "SUPER + ALT + ", "SUPER + SHIFT + ", "SUPER + ALT + SHIFT + " }) do
-    hl.bind(mod .. "mouse:274", function() midClickHeld = true end, { non_consuming = true })
+local midScrolled = false
+
+local function onMidClickRelease()
+    midClickHeld = false
+    midScrolled = false
+    hl.unbind("CTRL + mouse:274")
+    hl.bind("CTRL + mouse:274", onMidClickRelease, { release = true, ignore_mods = true, non_consuming = true })
 end
-hl.bind("SUPER + mouse:274", function() midClickHeld = false end,
-    { non_consuming = true, release = true, ignore_mods = true })
+hl.bind("CTRL + mouse:274", onMidClickRelease, { release = true, ignore_mods = true, non_consuming = true })
+
+-- Swaps once per hold so an unscrolled click still passes its release through.
+local function markMidClickScrolled()
+    if midClickHeld and not midScrolled then
+        midScrolled = true
+        hl.unbind("CTRL + mouse:274")
+        hl.bind("CTRL + mouse:274", onMidClickRelease, { release = true, ignore_mods = true })
+    end
+end
+
+for _, mod in ipairs({ "SUPER + ", "SUPER + ALT + ", "SUPER + SHIFT + ", "SUPER + ALT + SHIFT + " }) do
+    hl.bind(mod .. "mouse:274", function() midClickHeld = true end)
+end
 
 local function is_scratchpad_open()
     for _, m in ipairs(hl.get_monitors()) do
@@ -259,6 +278,7 @@ for i = 1, 2 do
     local mod = { "SUPER + SHIFT + mouse_", "SUPER + ALT + SHIFT + mouse_" }
     hl.bind(mod[i] .. "down", function()
         if midClickHeld then
+            markMidClickScrolled()
             hl.dispatch(hl.dsp.window.move({ workspace = "e+0" }))
         elseif not is_scratchpad_open() then
             hl.dispatch(hl.dsp.workspace.toggle_special("special"))
@@ -266,6 +286,7 @@ for i = 1, 2 do
     end, { description = "Workspace: Open scratchpad" })
     hl.bind(mod[i] .. "up", function()
         if midClickHeld then
+            markMidClickScrolled()
             hl.dispatch(hl.dsp.window.move({ workspace = "special:special" }))
         elseif is_scratchpad_open() then
             hl.dispatch(hl.dsp.workspace.toggle_special("special"))
@@ -345,6 +366,7 @@ for i = 1, 4 do
     local prefix = { "+", "-", "m+", "m-" }
     hl.bind(keycombos[i], function()
         if midClickHeld then
+            markMidClickScrolled()
             hl.dispatch(hl.dsp.window.move({ workspace = prefix[i] .. "1" }))
         else
             hl.dispatch(hl.dsp.focus({ workspace = prefix[i] .. "1" }))
