@@ -20,14 +20,15 @@ hl.gesture({
 hl.gesture({ fingers = 4, direction = "up", action = "unset" })
 hl.gesture({ fingers = 4, direction = "down", action = "unset" })
 
-hl.device({
-    name = "logitech-g305-1",
-    sensitivity = -0.6,
-})
-hl.device({
-    name = "input-remapper-logitech-g305-forwarded-1",
-    sensitivity = -0.6,
-})
+for i = 1, 2 do
+    local mousenames = { "logitech-g305", "input-remapper-logitech-g305-forwarded" }
+    for j = 1, 4 do
+        hl.device({
+            name = mousenames[i] .. "-" .. j,
+            sensitivity = -0.6,
+        })
+    end
+end
 
 -- # Hyprgrass
 hl.config({
