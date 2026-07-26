@@ -39,7 +39,11 @@ hl.bind("SUPER + F1", function()
     hl.exec_cmd("ddcutil setvcp 60 " .. target)
 end)
 
--- Hyprgrass
+-- Hyprgrass (everything below only applies if installed via hyprpm)
+if not is_file_exists(HOME .. "/.local/share/hyprpm/hyprgrass") then
+    return
+end
+
 hl.config({
     plugin = {
         hyprgrass = {
