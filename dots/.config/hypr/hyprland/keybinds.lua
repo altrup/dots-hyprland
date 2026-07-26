@@ -218,24 +218,24 @@ end
 --# #/# bind = CTRL+SUPER, Scroll ↑/↓,, -- Send to workspace left/right
 for i = 1, 2 do
     local key = "CTRL + SUPER + mouse_"
-    local keycombos = { key .. "down", key .. "up" }
+    local keycombos = { key .. "up", key .. "down" }
     local prefix = { "r-", "r+" }
     hl.bind(keycombos[i], hl.dsp.window.move({ workspace = prefix[i] .. "1" }))
 end
 --# #/# bind = CTRL+SUPER+ALT, Scroll ↑/↓,, -- Send to active workspace left/right
 for i = 1, 2 do
     local key = "CTRL + SUPER + ALT + mouse_"
-    local keycombos = { key .. "down", key .. "up" }
+    local keycombos = { key .. "up", key .. "down" }
     local prefix = { "m-", "m+" }
     hl.bind(keycombos[i], hl.dsp.window.move({ workspace = prefix[i] .. "1" }))
 end
 --# #/# bind = CTRL+SUPER+SHIFT / CTRL+SUPER+ALT+SHIFT, Scroll ↑/↓,, -- Send to/from scratchpad
-hl.bind("CTRL + SUPER + SHIFT + mouse_down", hl.dsp.window.move({ workspace = "e+0" }),
+hl.bind("CTRL + SUPER + SHIFT + mouse_up", hl.dsp.window.move({ workspace = "e+0" }),
     { description = "Window: Send back from scratchpad" })
-hl.bind("CTRL + SUPER + SHIFT + mouse_up", hl.dsp.window.move({ workspace = "special:special" }),
+hl.bind("CTRL + SUPER + SHIFT + mouse_down", hl.dsp.window.move({ workspace = "special:special" }),
     { description = "Window: Send to scratchpad" })
-hl.bind("CTRL + SUPER + ALT + SHIFT + mouse_down", hl.dsp.window.move({ workspace = "e+0" }))
-hl.bind("CTRL + SUPER + ALT + SHIFT + mouse_up", hl.dsp.window.move({ workspace = "special:special" }))
+hl.bind("CTRL + SUPER + ALT + SHIFT + mouse_up", hl.dsp.window.move({ workspace = "e+0" }))
+hl.bind("CTRL + SUPER + ALT + SHIFT + mouse_down", hl.dsp.window.move({ workspace = "special:special" }))
 
 -- Own dummy key ("CTRL + mouse:274") so hl.unbind (which nukes all binds on a
 -- key regardless of press/release) can retarget this without hitting the entry binds.
@@ -276,7 +276,7 @@ end
 --#/# bind = SUPER + mouse:274 (hold) + SHIFT, Scroll ↑/↓,, -- Send to/from scratchpad
 for i = 1, 2 do
     local mod = { "SUPER + SHIFT + mouse_", "SUPER + ALT + SHIFT + mouse_" }
-    hl.bind(mod[i] .. "down", function()
+    hl.bind(mod[i] .. "up", function()
         if midClickHeld then
             markMidClickScrolled()
             hl.dispatch(hl.dsp.window.move({ workspace = "e+0" }))
@@ -284,7 +284,7 @@ for i = 1, 2 do
             hl.dispatch(hl.dsp.workspace.toggle_special("special"))
         end
     end, { description = "Workspace: Open scratchpad" })
-    hl.bind(mod[i] .. "up", function()
+    hl.bind(mod[i] .. "down", function()
         if midClickHeld then
             markMidClickScrolled()
             hl.dispatch(hl.dsp.window.move({ workspace = "special:special" }))
@@ -363,7 +363,7 @@ end
 --#/# bind = SUPER + mouse:274 (hold) + ALT, Scroll ↑/↓,, -- Send to active workspace left/right
 for i = 1, 4 do
     local keycombos = { "SUPER + mouse_up", "SUPER + mouse_down", "SUPER + ALT + mouse_up", "SUPER + ALT + mouse_down" }
-    local prefix = { "+", "-", "m+", "m-" }
+    local prefix = { "-", "+", "m-", "m+" }
     hl.bind(keycombos[i], function()
         if midClickHeld then
             markMidClickScrolled()
