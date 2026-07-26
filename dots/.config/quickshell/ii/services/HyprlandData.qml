@@ -47,22 +47,38 @@ Singleton {
 
     // Internals
 
+    // Setting running=true on an already-running Process is a no-op, which would
+    // silently drop refreshes requested during event bursts; queue them instead.
+    component RefreshProcess: Process {
+        property bool queued: false
+        function requestRun() {
+            if (running) queued = true;
+            else running = true;
+        }
+        onExited: {
+            if (queued) {
+                queued = false;
+                running = true;
+            }
+        }
+    }
+
     function updateWindows() {
-        getClients.running = true;
-        getActiveWindow.running = true;
+        getClients.requestRun();
+        getActiveWindow.requestRun();
     }
 
     function updateLayers() {
-        getLayers.running = true;
+        getLayers.requestRun();
     }
 
     function updateMonitors() {
-        getMonitors.running = true;
+        getMonitors.requestRun();
     }
 
     function updateWorkspaces() {
-        getWorkspaces.running = true;
-        getActiveWorkspace.running = true;
+        getWorkspaces.requestRun();
+        getActiveWorkspace.requestRun();
     }
 
     function updateAll() {
@@ -95,7 +111,7 @@ Singleton {
         }
     }
 
-    Process {
+    RefreshProcess {
         id: getClients
         command: ["hyprctl", "clients", "-j"]
         stdout: StdioCollector {
@@ -113,18 +129,23 @@ Singleton {
         }
     }
 
-    Process {
+    RefreshProcess {
         id: getActiveWindow
         command: ["hyprctl", "activewindow", "-j"]
         stdout: StdioCollector {
             id: activeWindowCollector
             onStreamFinished: {
-                root.activeWindow = JSON.parse(activeWindowCollector.text)
+                // hyprctl prints "Invalid" (not JSON) when no window is focused
+                try {
+                    root.activeWindow = JSON.parse(activeWindowCollector.text);
+                } catch (e) {
+                    root.activeWindow = null;
+                }
             }
         }
     }
 
-    Process {
+    RefreshProcess {
         id: getMonitors
         command: ["hyprctl", "monitors", "-j"]
         stdout: StdioCollector {
@@ -135,7 +156,7 @@ Singleton {
         }
     }
 
-    Process {
+    RefreshProcess {
         id: getLayers
         command: ["hyprctl", "layers", "-j"]
         stdout: StdioCollector {
@@ -146,7 +167,7 @@ Singleton {
         }
     }
 
-    Process {
+    RefreshProcess {
         id: getWorkspaces
         command: ["hyprctl", "workspaces", "-j"]
         stdout: StdioCollector {
@@ -166,7 +187,7 @@ Singleton {
         }
     }
 
-    Process {
+    RefreshProcess {
         id: getActiveWorkspace
         command: ["hyprctl", "activeworkspace", "-j"]
         stdout: StdioCollector {
