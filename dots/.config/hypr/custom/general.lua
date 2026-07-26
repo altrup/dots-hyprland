@@ -30,7 +30,16 @@ for i = 1, 2 do
     end
 end
 
--- # Hyprgrass
+-- My monitor
+hl.bind("SUPER + F1", function()
+    local p = io.popen("ddcutil getvcp 60 --brief")
+    local out = p:read("*a")
+    p:close()
+    local target = out:match("x0f%s*$") and "0x11" or "0x0f"
+    hl.exec_cmd("ddcutil setvcp 60 " .. target)
+end)
+
+-- Hyprgrass
 hl.config({
     plugin = {
         hyprgrass = {
