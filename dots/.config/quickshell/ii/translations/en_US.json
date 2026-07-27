@@ -612,7 +612,7 @@
   "Battery full": "Battery full",
   "Pin": "Pin",
   "Unpin": "Unpin",
-  "Local CLI | Anthropic's %1 model via the Claude Code CLI": "Local CLI | Anthropic's %1 model via the Claude Code CLI",
+  "Online | Claude Code CLI\nAnthropic's %1 model": "Online | Claude Code CLI\nAnthropic's %1 model",
   "No model": "No model",
   "None": "None"
 }

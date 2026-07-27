@@ -416,7 +416,7 @@ Singleton {
                         root.addModel("claude-" + root.safeModelName(alias), {
                             "name": "Claude " + CF.StringUtils.toTitleCase(alias),
                             "icon": "spark-symbolic",
-                            "description": Translation.tr("Local CLI | Anthropic's %1 model via the Claude Code CLI").arg(alias),
+                            "description": Translation.tr("Online | Claude Code CLI\nAnthropic's %1 model").arg(alias),
                             "homepage": "https://claude.com/claude-code",
                             "endpoint": "https://api.anthropic.com",
                             "model": alias,
