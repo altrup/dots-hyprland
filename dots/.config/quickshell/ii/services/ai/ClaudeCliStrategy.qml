@@ -102,7 +102,7 @@ ApiStrategy {
     // The same splitter the renderer uses, so ordinals can't desync from it
     function commandFenceCount(content) {
         return CF.StringUtils.splitMarkdownBlocks(content)
-            .filter(b => b.type === "code" && b.lang === "command").length;
+            .filter(b => b.type === "code" && b.lang?.split(":")[0] === "command").length;
     }
 
     function registerTool(id, name, message) {
@@ -122,7 +122,7 @@ ApiStrategy {
     // Valid only while the fence is the message tail: from registerTool until the
     // block's stop event (tool.open), plus the stop event's own final rewrite
     function rewriteFence(message, tool) {
-        const fence = `\n\n\`\`\`command\n${tool.name}: ${commandSummary(tool)}\n\`\`\`\n\n`;
+        const fence = `\n\n\`\`\`command:${tool.name}\n${commandSummary(tool)}\n\`\`\`\n\n`;
         message.content = message.content.slice(0, tool.fenceStart) + fence;
         message.rawContent = message.rawContent.slice(0, tool.rawFenceStart) + fence;
     }

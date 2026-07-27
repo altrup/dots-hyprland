@@ -51,7 +51,7 @@ Singleton {
      * @returns {Array<{type: "text" | "think" | "code", content: string, lang?: string, completed?: boolean}>}
      */
     function splitMarkdownBlocks(markdown) {
-        const regex = /```(\w+)?\n([\s\S]*?)```|<think>([\s\S]*?)<\/think>/g;
+        const regex = /```([\w:-]+)?\n([\s\S]*?)```|<think>([\s\S]*?)<\/think>/g;
         /**
          * @type {{type: "text" | "think" | "code"; content: string; lang: string | undefined; completed: boolean | undefined}[]}
          */
@@ -119,7 +119,7 @@ Singleton {
                     });
                 }
                 // Try to detect language after ```
-                const codeLangMatch = text.slice(codeStart + 3).match(/^(\w+)?\n/);
+                const codeLangMatch = text.slice(codeStart + 3).match(/^([\w:-]+)?\n/);
                 let lang = "";
                 let codeContentStart = codeStart + 3;
                 if (codeLangMatch) {

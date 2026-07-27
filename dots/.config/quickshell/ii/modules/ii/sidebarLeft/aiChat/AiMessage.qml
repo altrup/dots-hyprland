@@ -24,7 +24,7 @@ Rectangle {
     // Block index of the command fence awaiting approval (messageData.pendingCommandIndex
     // counts command fences, not blocks)
     property int pendingCommandBlockIndex: messageBlocks
-        .map((block, i) => (block.type === "code" && block.lang === "command") ? i : -1)
+        .map((block, i) => (block.type === "code" && block.lang?.split(":")[0] === "command") ? i : -1)
         .filter(i => i >= 0)[root.messageData?.pendingCommandIndex ?? -1] ?? -1
 
     anchors.left: parent?.left
