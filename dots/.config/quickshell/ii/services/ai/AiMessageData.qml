@@ -21,5 +21,7 @@ QtObject {
     property var functionCall
     property string functionResponse
     property bool functionPending: false
+    // Ordinal (among the message's ```command fences) of the one awaiting approval
+    property int pendingCommandIndex: -1
     property bool visibleToUser: true
 }
