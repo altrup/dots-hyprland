@@ -881,10 +881,26 @@ Singleton {
         return true;
     }
 
+    // Appends the :denied flag to the pending command fence's info string, so the
+    // decision persists in the transcript and the block title renders it
+    function markCommandDenied(message: AiMessageData) {
+        const index = message.pendingCommandIndex ?? -1;
+        if (index < 0) return;
+        let seen = 0;
+        const mark = content => content.replace(/```command((?::[\w-]+)*)\n/g,
+            m => (seen++ === index) ? m.replace(/\n$/, ":denied\n") : m);
+        message.content = mark(message.content);
+        seen = 0;
+        message.rawContent = mark(message.rawContent);
+    }
+
     function rejectCommand(message: AiMessageData) {
         if (!message.functionPending) return;
         message.functionPending = false; // User decided, no more "thinking"
-        if (answerCliPermission(false)) return;
+        if (answerCliPermission(false)) {
+            markCommandDenied(message);
+            return;
+        }
         addFunctionOutputMessage(message.functionName, Translation.tr("Command rejected by user"))
     }
 
