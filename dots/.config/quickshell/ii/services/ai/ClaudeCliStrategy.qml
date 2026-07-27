@@ -11,6 +11,7 @@ ApiStrategy {
     // The request captured by buildRequestData: {model, messages, systemPrompt, filePath, sessionId}
     property var pendingRequest: null
     property bool inThinkingBlock: false
+    property bool inToolBlock: false
     property bool interruptRequested: false
 
     function buildEndpoint(model: AiModel): string { return "" }
@@ -110,7 +111,10 @@ ApiStrategy {
                         inThinkingBlock = true;
                         appendContent(message, "\n\n<think>\n");
                     } else if (block.type === "tool_use") {
-                        appendContent(message, `\n\n<think>\nRunning \`${block.name}\`\n</think>\n\n`);
+                        // No buttons appear: they are gated on functionPending, which
+                        // only a permission control_request sets
+                        inToolBlock = true;
+                        appendContent(message, `\n\n\`\`\`command\n${block.name}: `);
                     }
                 } else if (event.type === "content_block_delta") {
                     const delta = event.delta ?? {};
@@ -118,10 +122,17 @@ ApiStrategy {
                         appendContent(message, delta.text ?? "");
                     } else if (delta.type === "thinking_delta") {
                         appendContent(message, delta.thinking ?? "");
+                    } else if (delta.type === "input_json_delta" && inToolBlock) {
+                        appendContent(message, delta.partial_json ?? "");
                     }
-                } else if (event.type === "content_block_stop" && inThinkingBlock) {
-                    inThinkingBlock = false;
-                    appendContent(message, "\n</think>\n\n");
+                } else if (event.type === "content_block_stop") {
+                    if (inThinkingBlock) {
+                        inThinkingBlock = false;
+                        appendContent(message, "\n</think>\n\n");
+                    } else if (inToolBlock) {
+                        inToolBlock = false;
+                        appendContent(message, "\n```\n\n");
+                    }
                 }
                 return {};
             }
@@ -175,12 +186,17 @@ ApiStrategy {
             inThinkingBlock = false;
             appendContent(message, "\n</think>\n\n");
         }
+        if (inToolBlock) {
+            inToolBlock = false;
+            appendContent(message, "\n```\n\n");
+        }
         return {};
     }
 
     function reset() {
         pendingRequest = null;
         inThinkingBlock = false;
+        inToolBlock = false;
         interruptRequested = false;
     }
 }
