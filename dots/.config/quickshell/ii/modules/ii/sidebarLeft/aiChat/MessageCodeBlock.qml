@@ -19,6 +19,7 @@ ColumnLayout {
     property var segmentContent: ({})
     property var segmentLang: "txt"
     property var messageData: {}
+    property bool isLatestCommand: true
     property bool isCommandRequest: segmentLang === "command"
     property var displayLang: (isCommandRequest ? "bash" : segmentLang)
 
@@ -249,7 +250,7 @@ ColumnLayout {
                     }
                 }
                 Loader {
-                    active: root.isCommandRequest && root.messageData.functionPending
+                    active: root.isCommandRequest && root.isLatestCommand && root.messageData.functionPending
                     visible: active
                     Layout.fillWidth: true
                     Layout.margins: 6

@@ -617,5 +617,8 @@
   "Auto-Rotate": "Auto-Rotate",
 
   "Auto-Rotate | Requires iio-hyprland": "Auto-Rotate | Requires iio-hyprland",
-  "Size": "Size"
+  "Size": "Size",
+  "Online | Claude Code CLI\nAnthropic's %1 model": "Online | Claude Code CLI\nAnthropic's %1 model",
+  "No model": "No model",
+  "None": "None"
 }
