@@ -1,4 +1,5 @@
 import QtQuick
+import qs.services
 import qs.modules.common.functions as CF
 
 /**
@@ -11,7 +12,11 @@ ApiStrategy {
     // The request captured by buildRequestData: {model, messages, systemPrompt, filePath, sessionId}
     property var pendingRequest: null
     property bool inThinkingBlock: false
-    property bool inToolBlock: false
+    // Tool calls are buffered while streaming and rendered once: on the permission
+    // request, or on the tool result for auto-approved ones. Entries are registered at
+    // content_block_start because the permission request can beat the block's stop event
+    property string currentToolId: ""
+    property var pendingTools: ({})
     property bool interruptRequested: false
 
     function buildEndpoint(model: AiModel): string { return "" }
@@ -93,6 +98,17 @@ ApiStrategy {
         message.rawContent += text;
     }
 
+    function appendCommandFence(message, name, input, requestApproval) {
+        if (requestApproval) {
+            // The same splitter the renderer uses, so the ordinal can't desync from it
+            message.pendingCommandIndex = CF.StringUtils.splitMarkdownBlocks(message.content)
+                .filter(b => b.type === "code" && b.lang === "command").length;
+        }
+        const header = requestApproval ? `**${Translation.tr("Command execution request")}**\n\n` : "";
+        const summary = input?.command ?? JSON.stringify(input ?? {});
+        appendContent(message, `\n\n${header}\`\`\`command\n${name}: ${summary}\n\`\`\`\n\n`);
+    }
+
     function parseResponseLine(line, message) {
         try {
             const dataJson = JSON.parse(line);
@@ -111,10 +127,8 @@ ApiStrategy {
                         inThinkingBlock = true;
                         appendContent(message, "\n\n<think>\n");
                     } else if (block.type === "tool_use") {
-                        // No buttons appear: they are gated on functionPending, which
-                        // only a permission control_request sets
-                        inToolBlock = true;
-                        appendContent(message, `\n\n\`\`\`command\n${block.name}: `);
+                        currentToolId = block.id ?? "";
+                        pendingTools[currentToolId] = { name: block.name ?? "", inputJson: "" };
                     }
                 } else if (event.type === "content_block_delta") {
                     const delta = event.delta ?? {};
@@ -122,16 +136,36 @@ ApiStrategy {
                         appendContent(message, delta.text ?? "");
                     } else if (delta.type === "thinking_delta") {
                         appendContent(message, delta.thinking ?? "");
-                    } else if (delta.type === "input_json_delta" && inToolBlock) {
-                        appendContent(message, delta.partial_json ?? "");
+                    } else if (delta.type === "input_json_delta") {
+                        const tool = pendingTools[currentToolId];
+                        if (tool) tool.inputJson += delta.partial_json ?? "";
                     }
                 } else if (event.type === "content_block_stop") {
                     if (inThinkingBlock) {
                         inThinkingBlock = false;
                         appendContent(message, "\n</think>\n\n");
-                    } else if (inToolBlock) {
-                        inToolBlock = false;
-                        appendContent(message, "\n```\n\n");
+                    } else {
+                        const tool = pendingTools[currentToolId];
+                        if (tool) {
+                            try { tool.input = JSON.parse(tool.inputJson); } catch (e) {}
+                        }
+                        currentToolId = "";
+                    }
+                }
+                return {};
+            }
+
+            // A tool result is the first sign an auto-approved call ran; gated calls
+            // already rendered their fence with the permission request
+            if (dataJson.type === "user") {
+                const blocks = dataJson.message?.content;
+                if (Array.isArray(blocks)) {
+                    for (const block of blocks) {
+                        if (block.type !== "tool_result") continue;
+                        const tool = pendingTools[block.tool_use_id];
+                        if (!tool) continue;
+                        delete pendingTools[block.tool_use_id];
+                        appendCommandFence(message, tool.name, tool.input, false);
                     }
                 }
                 return {};
@@ -140,10 +174,9 @@ ApiStrategy {
             if (dataJson.type === "control_request") {
                 const request = dataJson.request ?? {};
                 if (request.subtype === "can_use_tool") {
-                    const inputSummary = request.input?.command
-                        ?? JSON.stringify(request.input ?? {});
-                    // The ```command fence triggers the chat's approve/reject buttons
-                    appendContent(message, `\n\n**Command execution request**\n\n\`\`\`command\n${request.tool_name}: ${inputSummary}\n\`\`\``);
+                    // This call's fence renders here; its tool result must not render another
+                    delete pendingTools[request.tool_use_id];
+                    appendCommandFence(message, request.tool_name ?? "", request.input ?? {}, true);
                     message.functionName = request.tool_name ?? "";
                     message.functionPending = true;
                     return { permissionRequest: { requestId: dataJson.request_id, input: request.input ?? {} } };
@@ -186,17 +219,14 @@ ApiStrategy {
             inThinkingBlock = false;
             appendContent(message, "\n</think>\n\n");
         }
-        if (inToolBlock) {
-            inToolBlock = false;
-            appendContent(message, "\n```\n\n");
-        }
         return {};
     }
 
     function reset() {
         pendingRequest = null;
         inThinkingBlock = false;
-        inToolBlock = false;
+        currentToolId = "";
+        pendingTools = ({});
         interruptRequested = false;
     }
 }

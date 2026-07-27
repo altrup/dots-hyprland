@@ -21,8 +21,11 @@ Rectangle {
     property bool editing: false
 
     property list<var> messageBlocks: StringUtils.splitMarkdownBlocks(root.messageData?.content)
-    // Only the newest command block may answer the pending approval; older ones already got their verdict
-    property int lastCommandBlockIndex: messageBlocks.reduce((last, block, i) => (block.type === "code" && block.lang === "command") ? i : last, -1)
+    // Block index of the command fence awaiting approval (messageData.pendingCommandIndex
+    // counts command fences, not blocks)
+    property int pendingCommandBlockIndex: messageBlocks
+        .map((block, i) => (block.type === "code" && block.lang === "command") ? i : -1)
+        .filter(i => i >= 0)[root.messageData?.pendingCommandIndex ?? -1] ?? -1
 
     anchors.left: parent?.left
     anchors.right: parent?.right
@@ -302,7 +305,7 @@ Rectangle {
                         segmentContent: modelData.content
                         segmentLang: modelData.lang
                         messageData: root.messageData
-                        isLatestCommand: index === root.lastCommandBlockIndex
+                        isPendingCommand: index === root.pendingCommandBlockIndex
                     } }
                     DelegateChoice { roleValue: "think"; MessageThinkBlock {
                         editing: root.editing

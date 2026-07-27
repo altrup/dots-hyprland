@@ -614,5 +614,6 @@
   "Unpin": "Unpin",
   "Online | Claude Code CLI\nAnthropic's %1 model": "Online | Claude Code CLI\nAnthropic's %1 model",
   "No model": "No model",
-  "None": "None"
+  "None": "None",
+  "Command execution request": "Command execution request"
 }
