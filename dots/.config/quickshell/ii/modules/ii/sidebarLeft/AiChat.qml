@@ -374,7 +374,8 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 spacing: 10
                 popin: false
                 topMargin: statusBg.implicitHeight + statusBg.anchors.topMargin * 2
-                bottomMargin: spacing
+                // Pads below short content so it top-aligns despite BottomToTop layout
+                bottomMargin: Math.max(spacing, height - topMargin - contentHeight)
 
                 touchpadScrollFactor: Config.options.interactions.scrolling.touchpadScrollFactor * 1.4
                 mouseScrollFactor: Config.options.interactions.scrolling.mouseScrollFactor * 1.4
