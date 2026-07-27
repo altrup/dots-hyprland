@@ -9,6 +9,8 @@ Item { // Model indicator
     property string icon: "api"
     property string text: ""
     property string tooltipText: ""
+    property bool clickable: false
+    signal clicked()
     implicitHeight: rowLayout.implicitHeight + 4 * 2
     implicitWidth: rowLayout.implicitWidth + 4 * 2
 
@@ -31,16 +33,21 @@ Item { // Model indicator
     }
 
     Loader {
-        active: root.tooltipText?.length > 0
+        active: root.tooltipText?.length > 0 || root.clickable
         anchors.fill: parent
         sourceComponent: MouseArea {
             id: mouseArea
             hoverEnabled: true
+            cursorShape: root.clickable ? Qt.PointingHandCursor : Qt.ArrowCursor
+            onClicked: {
+                if (root.clickable)
+                    root.clicked();
+            }
 
             StyledToolTip {
                 id: toolTip
                 extraVisibleCondition: false
-                alternativeVisibleCondition: mouseArea.containsMouse // Show tooltip when hovered
+                alternativeVisibleCondition: mouseArea.containsMouse && root.tooltipText.length > 0 // Show tooltip when hovered
                 text: root.tooltipText
             }
         }

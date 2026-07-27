@@ -197,6 +197,16 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
         },
     ]
 
+    // Prefill a command into an empty input (typing in progress is left alone)
+    // and focus it, so the suggestion popup opens ready for an argument
+    function prefillCommand(command) {
+        if (messageInputField.text.length === 0) {
+            messageInputField.text = `${root.commandPrefix}${command} `;
+            messageInputField.cursorPosition = messageInputField.text.length;
+        }
+        messageInputField.forceActiveFocus();
+    }
+
     function handleInput(inputText) {
         if (inputText.startsWith(root.commandPrefix)) {
             // Handle special commands
@@ -751,6 +761,8 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                     icon: "api"
                     text: Ai.getModel().name
                     tooltipText: Translation.tr("Current model: %1\nSet it with %2model MODEL").arg(Ai.getModel().name).arg(root.commandPrefix)
+                    clickable: true
+                    onClicked: root.prefillCommand("model")
                 }
 
                 ApiInputBoxIndicator {
@@ -758,6 +770,8 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                     icon: "service_toolbox"
                     text: Ai.currentTool.charAt(0).toUpperCase() + Ai.currentTool.slice(1)
                     tooltipText: Translation.tr("Current tool: %1\nSet it with %2tool TOOL").arg(Ai.currentTool).arg(root.commandPrefix)
+                    clickable: true
+                    onClicked: root.prefillCommand("tool")
                 }
 
                 Item {
