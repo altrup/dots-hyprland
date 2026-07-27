@@ -199,13 +199,11 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
         },
     ]
 
-    // Prefill a command into an empty input (typing in progress is left alone)
-    // and focus it, so the suggestion popup opens ready for an argument
+    // Prefill a command and focus the input, so the suggestion popup opens
+    // ready for an argument; replaces existing text like the command buttons do
     function prefillCommand(command) {
-        if (messageInputField.text.length === 0) {
-            messageInputField.text = `${root.commandPrefix}${command} `;
-            messageInputField.cursorPosition = messageInputField.text.length;
-        }
+        messageInputField.text = `${root.commandPrefix}${command} `;
+        messageInputField.cursorPosition = messageInputField.text.length;
         messageInputField.forceActiveFocus();
     }
 
