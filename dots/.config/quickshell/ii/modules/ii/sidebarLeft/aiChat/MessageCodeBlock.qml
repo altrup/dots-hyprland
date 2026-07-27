@@ -123,7 +123,6 @@ ColumnLayout {
 
         Rectangle { // Line numbers
             implicitWidth: 40
-            implicitHeight: lineNumberColumnLayout.implicitHeight
             Layout.fillHeight: true
             Layout.fillWidth: false
             topLeftRadius: Appearance.rounding.unsharpen
@@ -132,23 +131,27 @@ ColumnLayout {
             bottomRightRadius: Appearance.rounding.unsharpen
             color: Appearance.colors.colLayer2
 
-            ColumnLayout {
-                id: lineNumberColumnLayout
-                anchors {
-                    left: parent.left
-                    right: parent.right
-                    rightMargin: 5
-                    top: parent.top
-                    topMargin: 6
-                }
-                spacing: 0
-                
+            Item {
+                anchors.fill: parent
+                anchors.rightMargin: 5
+
                 Repeater {
-                    model: codeTextArea.text.split("\n").length
+                    // Char offset of each logical line's start; wrapped lines share one number
+                    model: {
+                        const lines = codeTextArea.text.split("\n");
+                        let offset = 0;
+                        return lines.map(line => {
+                            const start = offset;
+                            offset += line.length + 1;
+                            return start;
+                        });
+                    }
                     Text {
                         required property int index
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignRight
+                        required property var modelData
+                        anchors.right: parent.right
+                        // Width referenced so rewrapping recomputes each line's y
+                        y: (codeTextArea.width, codeTextArea.positionToRectangle(modelData).y)
                         font.family: Appearance.font.family.monospace
                         font.pixelSize: Appearance.font.pixelSize.small
                         color: Appearance.colors.colSubtext
@@ -172,80 +175,44 @@ ColumnLayout {
                 id: codeColumnLayout
                 anchors.fill: parent
                 spacing: 0
-                ScrollView {
-                    id: codeScrollView
+                TextArea { // Code
+                    id: codeTextArea
                     Layout.fillWidth: true
-                    // Layout.fillHeight: true
-                    implicitWidth: parent.width
-                    implicitHeight: codeTextArea.implicitHeight + 1
-                    contentWidth: codeTextArea.width - 1
-                    // contentHeight: codeTextArea.contentHeight
-                    clip: true
-                    ScrollBar.vertical.policy: ScrollBar.AlwaysOff
-                    
-                    ScrollBar.horizontal: ScrollBar {
-                        anchors.bottom: parent.bottom
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        padding: 5
-                        policy: ScrollBar.AsNeeded
-                        opacity: visualSize == 1 ? 0 : 1
-                        visible: opacity > 0
+                    readOnly: !editing
+                    selectByMouse: enableMouseSelection || editing
+                    renderType: Text.NativeRendering
+                    font.family: Appearance.font.family.monospace
+                    font.hintingPreference: Font.PreferNoHinting // Prevent weird bold text
+                    font.pixelSize: Appearance.font.pixelSize.small
+                    selectedTextColor: Appearance.m3colors.m3onSecondaryContainer
+                    selectionColor: Appearance.colors.colSecondaryContainer
+                    wrapMode: TextEdit.Wrap
+                    color: messageData.thinking ? Appearance.colors.colSubtext : Appearance.colors.colOnLayer1
 
-                        Behavior on opacity {
-                            NumberAnimation {
-                                duration: Appearance.animation.elementMoveFast.duration
-                                easing.type: Appearance.animation.elementMoveFast.type
-                                easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
-                            }
-                        }
-                        
-                        contentItem: Rectangle {
-                            implicitHeight: 6
-                            radius: Appearance.rounding.small
-                            color: Appearance.colors.colLayer2Active
+                    text: segmentContent
+                    onTextChanged: {
+                        segmentContent = text
+                    }
+
+                    Keys.onPressed: (event) => {
+                        if (event.key === Qt.Key_Tab) {
+                            // Insert 4 spaces at cursor
+                            const cursor = codeTextArea.cursorPosition;
+                            codeTextArea.insert(cursor, "    ");
+                            codeTextArea.cursorPosition = cursor + 4;
+                            event.accepted = true;
+                        } else if ((event.key === Qt.Key_C) && event.modifiers == Qt.ControlModifier) {
+                            codeTextArea.copy();
+                            event.accepted = true;
                         }
                     }
 
-                    TextArea { // Code
-                        id: codeTextArea
-                        Layout.fillWidth: true
-                        readOnly: !editing
-                        selectByMouse: enableMouseSelection || editing
-                        renderType: Text.NativeRendering
-                        font.family: Appearance.font.family.monospace
-                        font.hintingPreference: Font.PreferNoHinting // Prevent weird bold text
-                        font.pixelSize: Appearance.font.pixelSize.small
-                        selectedTextColor: Appearance.m3colors.m3onSecondaryContainer
-                        selectionColor: Appearance.colors.colSecondaryContainer
-                        // wrapMode: TextEdit.Wrap
-                        color: messageData.thinking ? Appearance.colors.colSubtext : Appearance.colors.colOnLayer1
-
-                        text: segmentContent
-                        onTextChanged: {
-                            segmentContent = text
-                        }
-
-                        Keys.onPressed: (event) => {
-                            if (event.key === Qt.Key_Tab) {
-                                // Insert 4 spaces at cursor
-                                const cursor = codeTextArea.cursorPosition;
-                                codeTextArea.insert(cursor, "    ");
-                                codeTextArea.cursorPosition = cursor + 4;
-                                event.accepted = true;
-                            } else if ((event.key === Qt.Key_C) && event.modifiers == Qt.ControlModifier) {
-                                codeTextArea.copy();
-                                event.accepted = true;
-                            }
-                        }
-
-                        SyntaxHighlighter {
-                            id: highlighter
-                            textEdit: codeTextArea
-                            repository: Repository
-                            definition: Repository.definitionForName(root.displayLang || "plaintext")
-                            theme: Appearance.syntaxHighlightingTheme
-                        }
+                    SyntaxHighlighter {
+                        id: highlighter
+                        textEdit: codeTextArea
+                        repository: Repository
+                        definition: Repository.definitionForName(root.displayLang || "plaintext")
+                        theme: Appearance.syntaxHighlightingTheme
                     }
                 }
                 Loader {
@@ -279,16 +246,6 @@ ColumnLayout {
                 }
             }
 
-            // MouseArea to block scrolling
-            // MouseArea {
-            //     id: codeBlockMouseArea
-            //     anchors.fill: parent
-            //     acceptedButtons: editing ? Qt.NoButton : Qt.LeftButton
-            //     cursorShape: (enableMouseSelection || editing) ? Qt.IBeamCursor : Qt.ArrowCursor
-            //     onWheel: (event) => {
-            //         event.accepted = false
-            //     }
-            // }
         }
     }
 }
