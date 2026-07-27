@@ -11,6 +11,8 @@ hl.bind("SUPER + O", hl.dsp.global("quickshell:overlayToggle"), { description = 
 -- main thread, since hyprctl's IPC request needs that same thread to respond
 local lidstate = require("custom.lidstate")
 
+lidstate.load_monitors()
+
 hl.bind("switch:on:Lid Switch", function()
     -- Don't disable the internal panel if it's the only display - that would
     -- leave Hyprland with zero outputs. Suspend instead, like default lid behavior
@@ -20,8 +22,9 @@ hl.bind("switch:on:Lid Switch", function()
     end
 end, { locked = true })
 
--- Safety net: monitors.lua is expected to check lidstate.is_lid_closed() itself
--- before enabling the internal panel, so this should normally be a no-op
+-- Safety net for anything that enables the internal panel outside the config
+-- load path, such as a hyprctl keyword. lidstate.load_monitors() already filters
+-- monitors.lua, so a plain reload leaves this a no-op
 hl.on("config.reloaded", function()
     if lidstate.is_lid_closed() then lidstate.disable_internal_if_external_present() end
 end)
@@ -31,6 +34,5 @@ hl.bind("switch:off:Lid Switch", function()
     if last_lid_monitor then
         hl.monitor({ output = last_lid_monitor, disabled = false, mode = "preferred", position = "auto", scale = 1 })
     end
-    local monitorsFile = HOME .. "/.config/hypr/monitors.lua"
-    if is_file_exists(monitorsFile) then dofile(monitorsFile) end
+    lidstate.load_monitors()
 end, { locked = true })
