@@ -23,6 +23,7 @@ Singleton {
     property Component geminiApiStrategy: GeminiApiStrategy {}
     property Component openaiApiStrategy: OpenAiApiStrategy {}
     property Component mistralApiStrategy: MistralApiStrategy {}
+    property Component claudeCliStrategy: ClaudeCliStrategy {}
     readonly property string interfaceRole: "interface"
     readonly property string apiKeyEnvVarName: "API_KEY"
 
@@ -49,6 +50,9 @@ Singleton {
         const key = apiKeys[model.key_id];
         return (key?.length > 0);
     }
+    readonly property bool busy: requester.running
+    // Pending CLI tool-permission request awaiting user approval: {requestId, input}
+    property var pendingCliPermission: null
     property var postResponseHook
     property real temperature: Persistent.states?.ai?.temperature ?? 0.5
     property QtObject tokenCount: QtObject {
@@ -233,9 +237,12 @@ Singleton {
             ],
             "search": [],
             "none": [],
+        },
+        "claude-cli": {
+            "none": []
         }
     }
-    property list<var> availableTools: Object.keys(root.tools[models[currentModelId]?.api_format])
+    property list<var> availableTools: Object.keys(root.tools[models[currentModelId]?.api_format] ?? {})
     property var toolDescriptions: {
         "functions": Translation.tr("Commands, edit configs, search.\nTakes an extra turn to switch to search mode if that's needed"),
         "search": Translation.tr("Gives the model search capabilities (immediately)"),
@@ -302,6 +309,7 @@ Singleton {
         "openai": openaiApiStrategy.createObject(this),
         "gemini": geminiApiStrategy.createObject(this),
         "mistral": mistralApiStrategy.createObject(this),
+        "claude-cli": claudeCliStrategy.createObject(this),
     }
     property ApiStrategy currentApiStrategy: apiStrategies[models[currentModelId]?.api_format || "openai"]
 
@@ -388,6 +396,43 @@ Singleton {
     }
 
     Process {
+        id: getClaudeModels
+        // The CLI runs locally but sends chats to Anthropic, so the local-only policy excludes it
+        running: Config.options.policies.ai !== 2
+        command: ["bash", "-c", "claude -p '/model' 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (Config.options.policies.ai === 2) return;
+                try {
+                    // Replies like "... Available: sonnet, opus, fable, default, or a full model ID."
+                    const match = text.match(/Available: ([^\n]+)/);
+                    if (!match) return;
+                    const aliases = match[1].split(",")
+                        .map(alias => alias.trim().replace(/\.$/, ""))
+                        // Drops the trailing "or a full model ID" and meta aliases
+                        .filter(alias => alias.length > 0 && !alias.includes(" ")
+                            && !["default", "best", "opusplan"].includes(alias));
+                    aliases.forEach(alias => {
+                        root.addModel("claude-" + root.safeModelName(alias), {
+                            "name": "Claude " + CF.StringUtils.toTitleCase(alias),
+                            "icon": "spark-symbolic",
+                            "description": Translation.tr("Local CLI | Anthropic's %1 model via the Claude Code CLI").arg(alias),
+                            "homepage": "https://claude.com/claude-code",
+                            "endpoint": "https://api.anthropic.com",
+                            "model": alias,
+                            "requires_key": false,
+                            "api_format": "claude-cli",
+                        });
+                    });
+                    root.modelList = Object.keys(root.models);
+                } catch (e) {
+                    console.log("Could not fetch Claude CLI models:", e);
+                }
+            }
+        }
+    }
+
+    Process {
         id: getDefaultPrompts
         running: true
         command: ["ls", "-1", Directories.defaultAiPrompts]
@@ -466,9 +511,14 @@ Singleton {
     function removeMessage(index) {
         if (index < 0 || index >= messageIDs.length) return;
         const id = root.messageIDs[index];
+        const removedRole = root.messageByID[id].role;
         root.messageIDs.splice(index, 1);
         root.messageIDs = [...root.messageIDs];
         delete root.messageByID[id];
+        // CLI sessions are append-only; drop the ids so an edited chat starts fresh
+        if (removedRole !== root.interfaceRole) {
+            root.messageIDs.forEach(mid => { root.messageByID[mid].cliSessionId = "" });
+        }
     }
 
     function addApiKeyAdvice(model) {
@@ -579,12 +629,20 @@ Singleton {
 
     Process {
         id: requester
+        // Launch claude cli in ~/.config/illogical-impulse
+        workingDirectory: Directories.shellConfig
         property list<string> baseCommand: ["bash"]
         property AiMessageData message
         property ApiStrategy currentStrategy
+        // Used when interrupting previous messages to wait 
+        // until process exits before starting new request
+        property bool restartOnExit: false
 
         function markDone() {
             requester.message.done = true;
+            root.pendingCliPermission = null;
+            requester.message.functionPending = false;
+            requester.stdinEnabled = false;
             if (root.postResponseHook) {
                 root.postResponseHook();
                 root.postResponseHook = null; // Reset hook after use
@@ -594,6 +652,13 @@ Singleton {
         }
 
         function makeRequest() {
+            // Kill previous request before making new one
+            if (requester.running) {
+                requester.restartOnExit = true;
+                root.interrupt();
+                return;
+            }
+            requester.restartOnExit = false;
             const model = models[currentModelId];
 
             // Fetch API keys if needed
@@ -654,7 +719,7 @@ Singleton {
 
             /* Create command string */
             let scriptRequestContent = ""
-            scriptRequestContent += `curl --no-buffer "${endpoint}"`
+            scriptRequestContent += `curl --no-buffer -sS "${endpoint}"`
                 + ` ${headerString}`
                 + (authHeader ? ` ${authHeader}` : "")
                 + ` --data '${CF.StringUtils.shellSingleQuoteEscape(JSON.stringify(data))}'`
@@ -666,7 +731,15 @@ Singleton {
             requesterScriptFile.path = Qt.resolvedUrl(shellScriptPath)
             requesterScriptFile.setText(scriptContent)
             requester.command = baseCommand.concat([shellScriptPath]);
+            requester.stdinEnabled = true;
             requester.running = true
+        }
+
+        // Claude CLI takes input over stdin
+        onStarted: {
+            if (requester.currentStrategy.isCli) {
+                requester.write(requester.currentStrategy.buildStdinPayload() + "\n");
+            }
         }
 
         stdout: SplitParser {
@@ -683,6 +756,9 @@ Singleton {
                     if (result.functionCall) {
                         requester.message.functionCall = result.functionCall;
                         root.handleFunctionCall(result.functionCall.name, result.functionCall.args, requester.message);
+                    }
+                    if (result.permissionRequest) {
+                        root.pendingCliPermission = result.permissionRequest;
                     }
                     if (result.tokenUsage) {
                         root.tokenCount.input = result.tokenUsage.input;
@@ -701,7 +777,22 @@ Singleton {
             }
         }
 
+        stderr: SplitParser {
+            onRead: data => {
+                if (data.length === 0) return;
+                // Show errors to user (useful for CLI)
+                if (requester.currentStrategy.isCli) {
+                    requester.message.thinking = false;
+                    requester.message.content += data + "\n";
+                    requester.message.rawContent += data + "\n";
+                } else {
+                    console.log("[Ai] Request stderr: ", data);
+                }
+            }
+        }
+
         onExited: (exitCode, exitStatus) => {
+            interruptKillTimer.stop();
             const result = requester.currentStrategy.onRequestFinished(requester.message);
             
             if (result.finished) {
@@ -714,6 +805,29 @@ Singleton {
             if (requester.message.content.includes("API key not valid")) {
                 root.addApiKeyAdvice(models[requester.message.model]);
             }
+
+            if (requester.restartOnExit) {
+                requester.restartOnExit = false;
+                requester.makeRequest();
+            }
+        }
+    }
+
+    Timer {
+        id: interruptKillTimer
+        interval: 3000
+        onTriggered: requester.running = false
+    }
+
+    function interrupt() {
+        // CLI strategies get a graceful stop first, so claude records the partial turn
+        // in its session; the timer (or a second press) hard-kills if it doesn't wind down
+        if (requester.running && !interruptKillTimer.running
+                && requester.currentStrategy.isCli) {
+            requester.write(requester.currentStrategy.buildInterruptRequest() + "\n");
+            interruptKillTimer.start();
+        } else {
+            requester.running = false;
         }
     }
 
@@ -759,15 +873,25 @@ Singleton {
         root.messageByID[id] = aiMessage;
     }
 
+    // CLI permission requests are answered over the running process's stdin
+    function answerCliPermission(allow: bool): bool {
+        if (!root.pendingCliPermission) return false;
+        requester.write(requester.currentStrategy.buildPermissionResponse(root.pendingCliPermission, allow) + "\n");
+        root.pendingCliPermission = null;
+        return true;
+    }
+
     function rejectCommand(message: AiMessageData) {
         if (!message.functionPending) return;
         message.functionPending = false; // User decided, no more "thinking"
+        if (answerCliPermission(false)) return;
         addFunctionOutputMessage(message.functionName, Translation.tr("Command rejected by user"))
     }
 
     function approveCommand(message: AiMessageData) {
         if (!message.functionPending) return;
         message.functionPending = false; // User decided, no more "thinking"
+        if (answerCliPermission(true)) return;
 
         const responseMessage = createFunctionOutputMessage(message.functionName, "", false);
         const id = idForMessage(responseMessage);
@@ -842,6 +966,7 @@ Singleton {
                 "fileUri": message.fileUri,
                 "localFilePath": message.localFilePath,
                 "model": message.model,
+                "cliSessionId": message.cliSessionId,
                 "thinking": false,
                 "done": true,
                 "annotations": message.annotations,
@@ -898,6 +1023,7 @@ Singleton {
                     "fileUri": message.fileUri,
                     "localFilePath": message.localFilePath,
                     "model": message.model,
+                    "cliSessionId": message.cliSessionId ?? "",
                     "thinking": message.thinking,
                     "done": message.done,
                     "annotations": message.annotations,

@@ -611,5 +611,8 @@
   "Use varying shapes for password characters": "Use varying shapes for password characters",
   "Battery full": "Battery full",
   "Pin": "Pin",
-  "Unpin": "Unpin"
+  "Unpin": "Unpin",
+  "Local CLI | Anthropic's %1 model via the Claude Code CLI": "Local CLI | Anthropic's %1 model via the Claude Code CLI",
+  "No model": "No model",
+  "None": "None"
 }

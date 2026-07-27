@@ -328,8 +328,13 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                         statusText: ""
                         description: Ai.currentModelHasApiKey ? Translation.tr("API key is set\nChange with /key YOUR_API_KEY") : Translation.tr("No API key\nSet it with /key YOUR_API_KEY")
                     }
-                    StatusSeparator {}
+                    StatusSeparator {
+                        visible: temperatureStatusItem.visible
+                    }
                     StatusItem {
+                        id: temperatureStatusItem
+                        // The Claude CLI does not expose temperature
+                        visible: Ai.getModel()?.api_format !== "claude-cli"
                         icon: "device_thermostat"
                         statusText: Ai.temperature.toFixed(1)
                         description: Translation.tr("Temperature\nChange with /temp VALUE")
@@ -683,9 +688,12 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                                 }
                                 event.accepted = false; // No image, let text pasting proceed
                             } else if (event.key === Qt.Key_Escape) {
-                                // Esc to detach file
+                                // Esc to detach file, else stop generation
                                 if (Ai.pendingFilePath.length > 0) {
                                     Ai.attachFile("");
+                                    event.accepted = true;
+                                } else if (Ai.busy) {
+                                    Ai.interrupt();
                                     event.accepted = true;
                                 } else {
                                     event.accepted = false;
@@ -694,20 +702,25 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                         }
                     }
                 }
-                RippleButton { // Send button
+                RippleButton { // Send/stop button
                     id: sendButton
+                    property bool stopMode: messageInputField.text.length === 0 && Ai.busy
                     Layout.alignment: Qt.AlignBottom
                     Layout.rightMargin: 5
                     implicitWidth: 40
                     implicitHeight: 40
                     buttonRadius: Appearance.rounding.small
-                    enabled: messageInputField.text.length > 0
+                    enabled: messageInputField.text.length > 0 || sendButton.stopMode
                     toggled: enabled
 
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: sendButton.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                         onClicked: {
+                            if (sendButton.stopMode) {
+                                Ai.interrupt();
+                                return;
+                            }
                             const inputText = messageInputField.text;
                             root.handleInput(inputText);
                             messageInputField.clear();
@@ -719,7 +732,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                         horizontalAlignment: Text.AlignHCenter
                         iconSize: 22
                         color: sendButton.enabled ? Appearance.m3colors.m3onPrimary : Appearance.colors.colOnLayer2Disabled
-                        text: "arrow_upward"
+                        text: sendButton.stopMode ? "stop_circle" : "arrow_upward"
                     }
                 }
             }
@@ -749,12 +762,13 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 ApiInputBoxIndicator {
                     // Model indicator
                     icon: "api"
-                    text: Ai.getModel().name
-                    tooltipText: Translation.tr("Current model: %1\nSet it with %2model MODEL").arg(Ai.getModel().name).arg(root.commandPrefix)
+                    text: Ai.getModel()?.name ?? Translation.tr("No model")
+                    tooltipText: Translation.tr("Current model: %1\nSet it with %2model MODEL").arg(Ai.getModel()?.name ?? Translation.tr("None")).arg(root.commandPrefix)
                 }
 
                 ApiInputBoxIndicator {
-                    // Tool indicator
+                    // Tool indicator; the Claude CLI brings its own tools, so the setting has no effect there
+                    visible: Ai.getModel()?.api_format !== "claude-cli"
                     icon: "service_toolbox"
                     text: Ai.currentTool.charAt(0).toUpperCase() + Ai.currentTool.slice(1)
                     tooltipText: Translation.tr("Current tool: %1\nSet it with %2tool TOOL").arg(Ai.currentTool).arg(root.commandPrefix)
