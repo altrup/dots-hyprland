@@ -18,6 +18,16 @@ ListView {
     // Accumulated scroll destination so wheel deltas stack while animating
     property real scrollTargetY: 0
 
+    // Scrollable contentY range; originY-based so it holds for BottomToTop views too.
+    // When content fits in the view, the range collapses to the resting position,
+    // which is the top edge for TopToBottom but the bottom edge for BottomToTop.
+    readonly property real contentTopY: originY - topMargin
+    readonly property real contentEndY: originY + contentHeight + bottomMargin - height
+    readonly property real minContentY: verticalLayoutDirection === ListView.BottomToTop
+        ? Math.min(contentTopY, contentEndY) : contentTopY
+    readonly property real maxContentY: verticalLayoutDirection === ListView.BottomToTop
+        ? contentEndY : Math.max(contentTopY, contentEndY)
+
     property real touchpadScrollFactor: Config?.options.interactions.scrolling.touchpadScrollFactor ?? 100
     property real mouseScrollFactor: Config?.options.interactions.scrolling.mouseScrollFactor ?? 50
     property real mouseScrollDeltaThreshold: Config?.options.interactions.scrolling.mouseScrollDeltaThreshold ?? 120
@@ -25,6 +35,12 @@ ListView {
     function resetDrag() {
         root.dragIndex = -1
         root.dragDistance = 0
+    }
+
+    // positionViewAtEnd() ignores bottomMargin, so compute the true end manually
+    function scrollToEnd() {
+        root.scrollTargetY = root.maxContentY;
+        root.contentY = root.scrollTargetY;
     }
 
     maximumFlickVelocity: 3500
@@ -41,9 +57,8 @@ ListView {
             // while that of a mouse wheel is typically in multiples of ±120.
             var scrollFactor = Math.abs(wheelEvent.angleDelta.y) >= root.mouseScrollDeltaThreshold ? root.mouseScrollFactor : root.touchpadScrollFactor;
 
-            const maxY = Math.max(0, root.contentHeight - root.height);
             const base = scrollAnim.running ? root.scrollTargetY : root.contentY;
-            var targetY = Math.max(0, Math.min(base - delta * scrollFactor, maxY));
+            var targetY = Math.max(root.minContentY, Math.min(base - delta * scrollFactor, root.maxContentY));
 
             root.scrollTargetY = targetY;
             root.contentY = targetY;

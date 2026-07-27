@@ -6,7 +6,11 @@ import QtQuick.Layouts
 
 RippleButton {
     id: root
-    required property ListView target
+    required property StyledListView target
+    // Hide based on scroll intent, not just atYEnd, so the button doesn't
+    // flash while an animated scroll to the bottom is still catching up
+    readonly property bool targetAtEnd: target.atYEnd
+        || target.scrollTargetY >= target.maxContentY - 1
 
     anchors {
         bottom: parent.bottom
@@ -14,8 +18,8 @@ RippleButton {
         bottomMargin: 10
     }
 
-    opacity: !target.atYEnd ? 1 : 0
-    scale: !target.atYEnd ? 1 : 0.7
+    opacity: !targetAtEnd ? 1 : 0
+    scale: !targetAtEnd ? 1 : 0.7
     visible: opacity > 0
     Behavior on opacity {
         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
@@ -33,7 +37,7 @@ RippleButton {
     buttonRadius: Appearance.rounding.verysmall
 
     downAction: () => {
-        target.positionViewAtEnd()
+        target.scrollToEnd()
     }
 
     contentItem: Row {
