@@ -12,9 +12,10 @@ ApiStrategy {
     // The request captured by buildRequestData: {model, messages, systemPrompt, filePath, sessionId}
     property var pendingRequest: null
     property bool inThinkingBlock: false
-    // Tool calls are buffered while streaming and rendered once: on the permission
-    // request, or on the tool result for auto-approved ones. Entries are registered at
-    // content_block_start because the permission request can beat the block's stop event
+    // Command fences render at content_block_start and are rewritten in place while the
+    // input streams; the open fence is always the message tail, so a rewrite is just a
+    // slice at the recorded offsets. Entries stay registered after the block stops
+    // because the permission request refers back to them (and can even beat the stop)
     property string currentToolId: ""
     property var pendingTools: ({})
     property bool interruptRequested: false
@@ -98,15 +99,60 @@ ApiStrategy {
         message.rawContent += text;
     }
 
-    function appendCommandFence(message, name, input, requestApproval) {
-        if (requestApproval) {
-            // The same splitter the renderer uses, so the ordinal can't desync from it
-            message.pendingCommandIndex = CF.StringUtils.splitMarkdownBlocks(message.content)
-                .filter(b => b.type === "code" && b.lang === "command").length;
+    // The same splitter the renderer uses, so ordinals can't desync from it
+    function commandFenceCount(content) {
+        return CF.StringUtils.splitMarkdownBlocks(content)
+            .filter(b => b.type === "code" && b.lang?.split(":")[0] === "command").length;
+    }
+
+    function registerTool(id, name, message) {
+        const tool = {
+            name: name,
+            inputJson: "",
+            open: true,
+            ordinal: commandFenceCount(message.content),
+            fenceStart: message.content.length,
+            rawFenceStart: message.rawContent.length,
+        };
+        pendingTools[id] = tool;
+        rewriteFence(message, tool);
+        return tool;
+    }
+
+    // Valid only while the fence is the message tail: from registerTool until the
+    // block's stop event (tool.open), plus the stop event's own final rewrite
+    function rewriteFence(message, tool) {
+        const fence = `\n\n\`\`\`command:${tool.name}\n${commandSummary(tool)}\n\`\`\`\n\n`;
+        message.content = message.content.slice(0, tool.fenceStart) + fence;
+        message.rawContent = message.rawContent.slice(0, tool.rawFenceStart) + fence;
+    }
+
+    function commandSummary(tool) {
+        if (tool.input !== undefined) return tool.input?.command ?? JSON.stringify(tool.input ?? {});
+        return partialStringField(tool.inputJson, "command") ?? tool.inputJson;
+    }
+
+    // Value of a string field in incomplete JSON, tolerating a cut mid-escape
+    function partialStringField(json, field) {
+        const start = json.match(new RegExp(`"${field}"\\s*:\\s*"`));
+        if (!start) return null;
+        let out = "";
+        for (let i = start.index + start[0].length; i < json.length; i++) {
+            const c = json[i];
+            if (c === '"') break;
+            if (c !== '\\') { out += c; continue; }
+            const esc = json[++i];
+            if (esc === undefined) break;
+            if (esc === 'n') out += '\n';
+            else if (esc === 't') out += '\t';
+            else if (esc === 'u') {
+                const hex = json.slice(i + 1, i + 5);
+                if (hex.length < 4) break;
+                out += String.fromCharCode(parseInt(hex, 16));
+                i += 4;
+            } else out += esc;
         }
-        const header = requestApproval ? `**${Translation.tr("Command execution request")}**\n\n` : "";
-        const summary = input?.command ?? JSON.stringify(input ?? {});
-        appendContent(message, `\n\n${header}\`\`\`command\n${name}: ${summary}\n\`\`\`\n\n`);
+        return out;
     }
 
     function parseResponseLine(line, message) {
@@ -128,7 +174,7 @@ ApiStrategy {
                         appendContent(message, "\n\n<think>\n");
                     } else if (block.type === "tool_use") {
                         currentToolId = block.id ?? "";
-                        pendingTools[currentToolId] = { name: block.name ?? "", inputJson: "" };
+                        registerTool(currentToolId, block.name ?? "", message);
                     }
                 } else if (event.type === "content_block_delta") {
                     const delta = event.delta ?? {};
@@ -138,7 +184,10 @@ ApiStrategy {
                         appendContent(message, delta.thinking ?? "");
                     } else if (delta.type === "input_json_delta") {
                         const tool = pendingTools[currentToolId];
-                        if (tool) tool.inputJson += delta.partial_json ?? "";
+                        if (tool) {
+                            tool.inputJson += delta.partial_json ?? "";
+                            rewriteFence(message, tool);
+                        }
                     }
                 } else if (event.type === "content_block_stop") {
                     if (inThinkingBlock) {
@@ -147,25 +196,13 @@ ApiStrategy {
                     } else {
                         const tool = pendingTools[currentToolId];
                         if (tool) {
-                            try { tool.input = JSON.parse(tool.inputJson); } catch (e) {}
+                            if (tool.input === undefined) {
+                                try { tool.input = JSON.parse(tool.inputJson); } catch (e) {}
+                            }
+                            rewriteFence(message, tool);
+                            tool.open = false;
                         }
                         currentToolId = "";
-                    }
-                }
-                return {};
-            }
-
-            // A tool result is the first sign an auto-approved call ran; gated calls
-            // already rendered their fence with the permission request
-            if (dataJson.type === "user") {
-                const blocks = dataJson.message?.content;
-                if (Array.isArray(blocks)) {
-                    for (const block of blocks) {
-                        if (block.type !== "tool_result") continue;
-                        const tool = pendingTools[block.tool_use_id];
-                        if (!tool) continue;
-                        delete pendingTools[block.tool_use_id];
-                        appendCommandFence(message, tool.name, tool.input, false);
                     }
                 }
                 return {};
@@ -174,9 +211,14 @@ ApiStrategy {
             if (dataJson.type === "control_request") {
                 const request = dataJson.request ?? {};
                 if (request.subtype === "can_use_tool") {
-                    // This call's fence renders here; its tool result must not render another
-                    delete pendingTools[request.tool_use_id];
-                    appendCommandFence(message, request.tool_name ?? "", request.input ?? {}, true);
+                    let tool = pendingTools[request.tool_use_id];
+                    if (!tool) tool = registerTool(request.tool_use_id, request.tool_name ?? "", message);
+                    if (tool.open) {
+                        // The request can beat the block's stop event; its input is authoritative
+                        tool.input = request.input ?? {};
+                        rewriteFence(message, tool);
+                    }
+                    message.pendingCommandIndex = tool.ordinal;
                     message.functionName = request.tool_name ?? "";
                     message.functionPending = true;
                     return { permissionRequest: { requestId: dataJson.request_id, input: request.input ?? {} } };

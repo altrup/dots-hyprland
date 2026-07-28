@@ -24,7 +24,7 @@ Rectangle {
     // Block index of the command fence awaiting approval (messageData.pendingCommandIndex
     // counts command fences, not blocks)
     property int pendingCommandBlockIndex: messageBlocks
-        .map((block, i) => (block.type === "code" && block.lang === "command") ? i : -1)
+        .map((block, i) => (block.type === "code" && block.lang?.split(":")[0] === "command") ? i : -1)
         .filter(i => i >= 0)[root.messageData?.pendingCommandIndex ?? -1] ?? -1
 
     anchors.left: parent?.left
@@ -270,26 +270,10 @@ Rectangle {
 
         ColumnLayout { // Message content
             id: messageContentColumnLayout
-            spacing: 0
+            spacing: root.messagePadding
+            Layout.topMargin: 1
+            Layout.bottomMargin: 6
 
-            Item {
-                Layout.fillWidth: true
-                implicitHeight: loadingIndicatorLoader.shown ? loadingIndicatorLoader.implicitHeight : 0
-                implicitWidth: loadingIndicatorLoader.implicitWidth
-                visible: implicitHeight > 0
-
-                Behavior on implicitHeight {
-                    animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
-                }
-                FadeLoader {
-                    id: loadingIndicatorLoader
-                    anchors.centerIn: parent
-                    shown: (root.messageBlocks.length < 1) && (!root.messageData.done)
-                    sourceComponent: MaterialLoadingIndicator {
-                        loading: true
-                    }
-                }
-            }
             Repeater {
                 model: ScriptModel {
                     values: root.messageBlocks
@@ -325,6 +309,39 @@ Rectangle {
                         done: root.messageData?.done ?? false
                         forceDisableChunkSplitting: root.messageData?.content.includes("```") ?? true
                     } }
+                }
+            }
+            Item {
+                Layout.fillWidth: true
+                implicitHeight: loadingIndicatorLoader.shown ? loadingIndicatorLoader.implicitHeight : 0
+                implicitWidth: loadingIndicatorLoader.implicitWidth
+                visible: implicitHeight > 0
+                // Cancels the column's edge padding below so the indicator sits centered
+                // between the last block and the card bottom
+                Layout.bottomMargin: loadingIndicatorLoader.shown ? -6 : 0
+                Behavior on Layout.bottomMargin {
+                    animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+                }
+
+                // Delayed show, instant hide: the active gap right after answering an
+                // approval is shorter than the delay, so the spinner doesn't flash
+                property bool indicatorWanted: !root.messageData.done && !root.messageData.functionPending
+                onIndicatorWantedChanged: if (indicatorWanted) showDelayTimer.restart()
+
+                Timer {
+                    id: showDelayTimer
+                    interval: 300
+                }
+                Behavior on implicitHeight {
+                    animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+                }
+                FadeLoader {
+                    id: loadingIndicatorLoader
+                    anchors.centerIn: parent
+                    shown: parent.indicatorWanted && !showDelayTimer.running
+                    sourceComponent: MaterialLoadingIndicator {
+                        loading: true
+                    }
                 }
             }
         }

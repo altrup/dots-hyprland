@@ -372,7 +372,6 @@ Singleton {
                 try {
                     if (data.length === 0) return;
                     const dataJson = JSON.parse(data);
-                    root.modelList = [...root.modelList, ...dataJson];
                     dataJson.forEach(model => {
                         const safeModelName = root.safeModelName(model);
                         root.addModel(safeModelName, {
@@ -386,11 +385,46 @@ Singleton {
                         })
                     });
 
-                    root.modelList = Object.keys(root.models);
-
                 } catch (e) {
                     console.log("Could not fetch Ollama models:", e);
                 }
+            }
+        }
+    }
+
+    // Ids added by CLI/cache discovery, so the refresh only ever removes its own
+    // models and not user-configured claude-cli entries from extraModels
+    property var claudeDiscoveredIds: []
+
+    function addClaudeModels(aliases) {
+        const ids = aliases.map(alias => "claude-" + root.safeModelName(alias));
+        root.claudeDiscoveredIds = [...new Set([...root.claudeDiscoveredIds, ...ids])];
+        aliases.forEach(alias => {
+            root.addModel("claude-" + root.safeModelName(alias), {
+                "name": "Claude " + CF.StringUtils.toTitleCase(alias),
+                "icon": "spark-symbolic",
+                "description": Translation.tr("Online | Claude Code CLI\nAnthropic's %1 model").arg(alias),
+                "homepage": "https://claude.com/claude-code",
+                "endpoint": "https://api.anthropic.com",
+                "model": alias,
+                "requires_key": false,
+                "api_format": "claude-cli",
+            });
+        });
+    }
+
+    // Models appear instantly from the last run's cache; the CLI query refreshes it
+    // in the background (a cold `claude` start takes a few seconds)
+    FileView {
+        id: claudeModelsCache
+        path: Directories.claudeModelListCachePath
+        watchChanges: false
+        onLoadedChanged: {
+            if (!loaded || Config.options.policies.ai === 2) return;
+            try {
+                root.addClaudeModels(JSON.parse(claudeModelsCache.text()));
+            } catch (e) {
+                console.log("Could not load cached Claude CLI models:", e);
             }
         }
     }
@@ -405,26 +439,27 @@ Singleton {
                 if (Config.options.policies.ai === 2) return;
                 try {
                     // Replies like "... Available: sonnet, opus, fable, default, or a full model ID."
-                    const match = text.match(/Available: ([^\n]+)/);
-                    if (!match) return;
-                    const aliases = match[1].split(",")
+                    // No usable reply (claude missing, logged out, broken) yields an empty
+                    // list, dropping every discovered model through the same path below
+                    const aliases = (text.match(/Available: ([^\n]+)/)?.[1] ?? "").split(",")
                         .map(alias => alias.trim().replace(/\.$/, ""))
                         // Drops the trailing "or a full model ID" and meta aliases
                         .filter(alias => alias.length > 0 && !alias.includes(" ")
                             && !["default", "best", "opusplan"].includes(alias));
-                    aliases.forEach(alias => {
-                        root.addModel("claude-" + root.safeModelName(alias), {
-                            "name": "Claude " + CF.StringUtils.toTitleCase(alias),
-                            "icon": "spark-symbolic",
-                            "description": Translation.tr("Online | Claude Code CLI\nAnthropic's %1 model").arg(alias),
-                            "homepage": "https://claude.com/claude-code",
-                            "endpoint": "https://api.anthropic.com",
-                            "model": alias,
-                            "requires_key": false,
-                            "api_format": "claude-cli",
+                    // The CLI's list is authoritative: discovered models whose alias
+                    // no longer exists (e.g. stale cache entries) are dropped
+                    const freshIds = new Set(aliases.map(alias => "claude-" + root.safeModelName(alias)));
+                    const stale = root.claudeDiscoveredIds.filter(id => !freshIds.has(id));
+                    if (stale.length > 0) {
+                        const keptModels = {};
+                        Object.keys(root.models).forEach(id => {
+                            if (!stale.includes(id)) keptModels[id] = root.models[id];
                         });
-                    });
-                    root.modelList = Object.keys(root.models);
+                        root.models = keptModels;
+                    }
+                    root.claudeDiscoveredIds = Array.from(freshIds);
+                    root.addClaudeModels(aliases);
+                    claudeModelsCache.setText(JSON.stringify(aliases));
                 } catch (e) {
                     console.log("Could not fetch Claude CLI models:", e);
                 }
@@ -881,10 +916,26 @@ Singleton {
         return true;
     }
 
+    // Appends the :denied flag to the pending command fence's info string, so the
+    // decision persists in the transcript and the block title renders it
+    function markCommandDenied(message: AiMessageData) {
+        const index = message.pendingCommandIndex ?? -1;
+        if (index < 0) return;
+        let seen = 0;
+        const mark = content => content.replace(/```command((?::[\w-]+)*)\n/g,
+            m => (seen++ === index) ? m.replace(/\n$/, ":denied\n") : m);
+        message.content = mark(message.content);
+        seen = 0;
+        message.rawContent = mark(message.rawContent);
+    }
+
     function rejectCommand(message: AiMessageData) {
         if (!message.functionPending) return;
         message.functionPending = false; // User decided, no more "thinking"
-        if (answerCliPermission(false)) return;
+        if (answerCliPermission(false)) {
+            markCommandDenied(message);
+            return;
+        }
         addFunctionOutputMessage(message.functionName, Translation.tr("Command rejected by user"))
     }
 
@@ -949,7 +1000,7 @@ Singleton {
                 return;
             }
             message.pendingCommandIndex = CF.StringUtils.splitMarkdownBlocks(message.content)
-                .filter(b => b.type === "code" && b.lang === "command").length;
+                .filter(b => b.type === "code" && b.lang?.split(":")[0] === "command").length;
             const contentToAppend = `\n\n**${Translation.tr("Command execution request")}**\n\n\`\`\`command\n${args.command}\n\`\`\``;
             message.rawContent += contentToAppend;
             message.content += contentToAppend;

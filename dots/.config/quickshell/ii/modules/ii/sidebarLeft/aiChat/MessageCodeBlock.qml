@@ -20,8 +20,14 @@ ColumnLayout {
     property var segmentLang: "txt"
     property var messageData: {}
     property bool isPendingCommand: false
-    property bool isCommandRequest: segmentLang === "command"
-    property var displayLang: (isCommandRequest ? "bash" : segmentLang)
+    // Command fences carry the tool name in the info string: command:Read, command:Bash...
+    property bool isCommandRequest: (segmentLang ?? "").split(":")[0] === "command"
+    property string commandToolName: isCommandRequest ? ((segmentLang ?? "").split(":")[1] || "Bash") : ""
+    property bool commandDenied: isCommandRequest && (segmentLang ?? "").split(":").includes("denied")
+    // Bash runs shell commands; every other tool takes JSON input
+    property var displayLang: isCommandRequest
+        ? (commandToolName === "Bash" ? "bash" : "json")
+        : segmentLang
 
     property real codeBlockBackgroundRounding: Appearance.rounding.small
     property real codeBlockHeaderPadding: 3
@@ -47,17 +53,36 @@ ColumnLayout {
             anchors.rightMargin: codeBlockHeaderPadding
             spacing: 5
 
-            StyledText {
-                id: codeBlockLanguage
+            RowLayout {
                 Layout.alignment: Qt.AlignLeft
-                Layout.fillWidth: false
                 Layout.topMargin: 7
                 Layout.bottomMargin: 7
                 Layout.leftMargin: 10
-                font.pixelSize: Appearance.font.pixelSize.small
-                font.weight: Font.DemiBold
-                color: Appearance.colors.colOnLayer2
-                text: root.displayLang ? Repository.definitionForName(root.displayLang).name : "plain"
+                spacing: 6
+
+                StyledText {
+                    id: codeBlockLanguage
+                    font.pixelSize: Appearance.font.pixelSize.small
+                    font.weight: Font.DemiBold
+                    color: Appearance.colors.colOnLayer2
+                    text: root.isCommandRequest
+                        ? root.commandToolName
+                        : (root.displayLang ? Repository.definitionForName(root.displayLang).name : "plain")
+                }
+                Rectangle {
+                    visible: root.commandDenied
+                    implicitWidth: 4
+                    implicitHeight: 4
+                    radius: implicitWidth / 2
+                    color: Appearance.colors.colOnLayer1Inactive
+                }
+                StyledText {
+                    visible: root.commandDenied
+                    font.pixelSize: Appearance.font.pixelSize.small
+                    font.weight: Font.DemiBold
+                    color: Appearance.colors.colError
+                    text: Translation.tr("denied")
+                }
             }
 
             Item { Layout.fillWidth: true }
@@ -91,12 +116,12 @@ ColumnLayout {
 
                     onClicked: {
                         const downloadPath = FileUtils.trimFileProtocol(Directories.downloads)
-                        Quickshell.execDetached(["bash", "-c", 
-                            `echo '${StringUtils.shellSingleQuoteEscape(segmentContent)}' > '${downloadPath}/code.${segmentLang || "txt"}'`
+                        Quickshell.execDetached(["bash", "-c",
+                            `echo '${StringUtils.shellSingleQuoteEscape(segmentContent)}' > '${downloadPath}/code.${root.displayLang || "txt"}'`
                         ])
-                        Quickshell.execDetached(["notify-send", 
-                            Translation.tr("Code saved to file"), 
-                            Translation.tr("Saved to %1").arg(`${downloadPath}/code.${segmentLang || "txt"}`),
+                        Quickshell.execDetached(["notify-send",
+                            Translation.tr("Code saved to file"),
+                            Translation.tr("Saved to %1").arg(`${downloadPath}/code.${root.displayLang || "txt"}`),
                             "-a", "Shell"
                         ])
                         saveCodeButton.activated = true
