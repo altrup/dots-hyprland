@@ -51,7 +51,11 @@ function M.load_monitors()
     -- Shimmed through the chunk's environment; `hl` is native and may not be writable
     local shim = setmetatable({
         monitor = function(rule)
-            if not (type(rule) == "table" and tostring(rule.output):match("^eDP%-")) then
+            if type(rule) == "table" and tostring(rule.output):match("^eDP%-") then
+                -- Dropping the rule entirely would let the panel fall back to its
+                -- enabled default, so every reload would flap the output off and on
+                hl.monitor({ output = rule.output, disabled = true })
+            else
                 hl.monitor(rule)
             end
         end,
