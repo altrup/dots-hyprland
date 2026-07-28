@@ -17,6 +17,9 @@ ListView {
     property bool animateMovement: false
     // Accumulated scroll destination so wheel deltas stack while animating
     property real scrollTargetY: 0
+    // User intent to stay at the end, updated on every user scroll
+    property bool pinnedToEnd: false
+    readonly property bool scrollAnimating: scrollAnim.running
 
     // Scrollable contentY range, margin-aware; collapses to the top resting
     // position when content fits in the view
@@ -34,8 +37,17 @@ ListView {
 
     // positionViewAtEnd() ignores bottomMargin, so compute the true end manually
     function scrollToEnd() {
+        root.pinnedToEnd = true;
         root.scrollTargetY = root.maxContentY;
         root.contentY = root.scrollTargetY;
+    }
+
+    // Instant re-pin to the end; follows intent, never sets it
+    function snapToEnd() {
+        scrollBehavior.enabled = false;
+        root.scrollTargetY = root.maxContentY;
+        root.contentY = root.scrollTargetY;
+        scrollBehavior.enabled = true;
     }
 
     maximumFlickVelocity: 3500
@@ -55,6 +67,8 @@ ListView {
             const base = scrollAnim.running ? root.scrollTargetY : root.contentY;
             var targetY = Math.max(root.minContentY, Math.min(base - delta * scrollFactor, root.maxContentY));
 
+            // Any upward scroll unpins, even if clamping kept targetY at the end
+            root.pinnedToEnd = delta < 0 && targetY >= root.maxContentY - 1;
             root.scrollTargetY = targetY;
             root.contentY = targetY;
             wheelEvent.accepted = true;
@@ -62,6 +76,7 @@ ListView {
     }
 
     Behavior on contentY {
+        id: scrollBehavior
         NumberAnimation {
             id: scrollAnim
             alwaysRunToEnd: true
@@ -75,6 +90,9 @@ ListView {
     onContentYChanged: {
         if (!scrollAnim.running) {
             root.scrollTargetY = root.contentY;
+        }
+        if (dragging || flicking) {
+            root.pinnedToEnd = root.contentY >= root.maxContentY - 1;
         }
     }
 

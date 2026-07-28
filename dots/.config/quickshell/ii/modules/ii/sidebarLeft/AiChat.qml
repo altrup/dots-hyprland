@@ -32,10 +32,12 @@ Item {
             if (event.key === Qt.Key_PageUp) {
                 messageListView.scrollTargetY = Math.max(messageListView.minContentY, messageListView.contentY - messageListView.height / 2);
                 messageListView.contentY = messageListView.scrollTargetY;
+                messageListView.pinnedToEnd = false;
                 event.accepted = true;
             } else if (event.key === Qt.Key_PageDown) {
                 messageListView.scrollTargetY = Math.min(messageListView.maxContentY, messageListView.contentY + messageListView.height / 2);
                 messageListView.contentY = messageListView.scrollTargetY;
+                messageListView.pinnedToEnd = messageListView.scrollTargetY >= messageListView.maxContentY - 1;
                 event.accepted = true;
             }
         }
@@ -360,6 +362,9 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 anchors.fill: parent
                 spacing: 10
                 popin: false
+                // Keep all delegates alive: exact content height, no churn mid-scroll.
+                // The synchronous pin in onMaxContentYChanged relies on this
+                cacheBuffer: 100000000
                 topMargin: statusBg.implicitHeight + statusBg.anchors.topMargin * 2
                 bottomMargin: spacing
 
@@ -368,14 +373,12 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
 
                 add: null // Prevent function calls from being janky
 
-                // Follow the newest message (streaming growth, input area resizes)
-                // only while already at the end; scrolled-up reading stays put
-                property real lastMaxContentY: 0
+                pinnedToEnd: true
+                // Follow content growth while pinned, same-frame; snapping here is
+                // safe only because cacheBuffer prevents churn (binding loop otherwise)
                 onMaxContentYChanged: {
-                    const wasAtEnd = scrollTargetY >= lastMaxContentY - 1;
-                    lastMaxContentY = maxContentY;
-                    if (wasAtEnd) {
-                        scrollToEnd();
+                    if (pinnedToEnd && !scrollAnimating && contentY < maxContentY - 1) {
+                        snapToEnd();
                     }
                 }
 
