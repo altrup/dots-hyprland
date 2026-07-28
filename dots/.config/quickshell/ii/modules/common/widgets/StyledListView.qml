@@ -18,15 +18,10 @@ ListView {
     // Accumulated scroll destination so wheel deltas stack while animating
     property real scrollTargetY: 0
 
-    // Scrollable contentY range; originY-based so it holds for BottomToTop views too.
-    // When content fits in the view, the range collapses to the resting position,
-    // which is the top edge for TopToBottom but the bottom edge for BottomToTop.
-    readonly property real contentTopY: originY - topMargin
-    readonly property real contentEndY: originY + contentHeight + bottomMargin - height
-    readonly property real minContentY: verticalLayoutDirection === ListView.BottomToTop
-        ? Math.min(contentTopY, contentEndY) : contentTopY
-    readonly property real maxContentY: verticalLayoutDirection === ListView.BottomToTop
-        ? contentEndY : Math.max(contentTopY, contentEndY)
+    // Scrollable contentY range, margin-aware; collapses to the top resting
+    // position when content fits in the view
+    readonly property real minContentY: originY - topMargin
+    readonly property real maxContentY: Math.max(minContentY, originY + contentHeight + bottomMargin - height)
 
     property real touchpadScrollFactor: Config?.options.interactions.scrolling.touchpadScrollFactor ?? 100
     property real mouseScrollFactor: Config?.options.interactions.scrolling.mouseScrollFactor ?? 50
