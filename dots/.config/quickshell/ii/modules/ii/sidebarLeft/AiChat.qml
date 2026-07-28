@@ -361,29 +361,34 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 spacing: 10
                 popin: false
                 topMargin: statusBg.implicitHeight + statusBg.anchors.topMargin * 2
-                // Pads below short content so it top-aligns despite BottomToTop layout
-                bottomMargin: Math.max(spacing, height - topMargin - contentHeight)
+                bottomMargin: spacing
 
                 touchpadScrollFactor: Config.options.interactions.scrolling.touchpadScrollFactor * 1.4
                 mouseScrollFactor: Config.options.interactions.scrolling.mouseScrollFactor * 1.4
 
-                // Bottom-anchored layout keeps the view pinned to the newest message
-                // while streaming, and stable when scrolled up reading history
-                verticalLayoutDirection: ListView.BottomToTop
-
                 add: null // Prevent function calls from being janky
 
+                // Follow the newest message (streaming growth, input area resizes)
+                // only while already at the end; scrolled-up reading stays put
+                property real lastMaxContentY: 0
+                onMaxContentYChanged: {
+                    const wasAtEnd = scrollTargetY >= lastMaxContentY - 1;
+                    lastMaxContentY = maxContentY;
+                    if (wasAtEnd) {
+                        scrollToEnd();
+                    }
+                }
+
                 model: ScriptModel {
-                    // Reversed: BottomToTop places index 0 at the visual bottom
                     values: Ai.messageIDs.filter(id => {
                         const message = Ai.messageByID[id];
                         return message?.visibleToUser ?? true;
-                    }).reverse()
+                    })
                 }
                 delegate: AiMessage {
                     required property var modelData
                     required property int index
-                    messageIndex: Ai.messageIDs.indexOf(modelData)
+                    messageIndex: index
                     messageData: {
                         Ai.messageByID[modelData];
                     }
