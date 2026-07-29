@@ -7,6 +7,7 @@ import qs.modules.ii.sidebarLeft.aiChat
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Window
 import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Io
@@ -374,6 +375,10 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 spacing: 10
                 popin: false
                 topMargin: statusBg.implicitHeight + statusBg.anchors.topMargin * 2
+
+                // A drag inside a text field is a selection, not a scroll; the field
+                // would otherwise lose the mouse grab to this list mid-selection
+                interactive: !(Window.activeFocusItem instanceof TextInput)
 
                 touchpadScrollFactor: Config.options.interactions.scrolling.touchpadScrollFactor * 1.4
                 mouseScrollFactor: Config.options.interactions.scrolling.mouseScrollFactor * 1.4

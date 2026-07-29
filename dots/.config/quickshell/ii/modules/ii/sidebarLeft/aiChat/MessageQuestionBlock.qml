@@ -325,20 +325,10 @@ ColumnLayout {
                                     text: freeTextInput.placeholder
                                 }
 
-                                MouseArea { // Owns the drag so the list view can't steal it and
-                                    // scroll mid-selection; drives cursor/selection itself
+                                MouseArea { // Hover only; presses belong to the TextInput
                                     anchors.fill: parent
-                                    enabled: root.interactive
-                                    cursorShape: Qt.IBeamCursor
-                                    preventStealing: true
-                                    onPressed: mouse => {
-                                        freeTextInput.forceActiveFocus();
-                                        freeTextInput.cursorPosition = freeTextInput.positionAt(mouse.x, mouse.y);
-                                    }
-                                    onPositionChanged: mouse => {
-                                        freeTextInput.moveCursorSelection(freeTextInput.positionAt(mouse.x, mouse.y));
-                                    }
-                                    onDoubleClicked: freeTextInput.selectWord()
+                                    acceptedButtons: Qt.NoButton
+                                    cursorShape: root.interactive ? Qt.IBeamCursor : Qt.ArrowCursor
                                 }
 
                                 // The one custom entry this pill has contributed; edits replace it
