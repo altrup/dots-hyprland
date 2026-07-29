@@ -87,110 +87,50 @@ Singleton {
      * @returns {Array<{type: "text" | "think" | "code", content: string, lang?: string, completed?: boolean}>}
      */
     function splitMarkdownBlocks(markdown) {
-        // A still-streaming thought must not let code fences inside it match as
-        // code blocks: everything from an unclosed <think> onward is one
-        // incomplete think block, and only the text before it is parsed normally
-        let openThink = -1;
-        let searchFrom = 0;
-        while (true) {
-            const start = markdown.indexOf('<think>', searchFrom);
-            if (start === -1) break;
-            const close = markdown.indexOf('</think>', start);
-            if (close === -1) {
-                openThink = start;
-                break;
-            }
-            searchFrom = close + 8;
-        }
-        let openThinkContent = null;
-        if (openThink !== -1) {
-            openThinkContent = markdown.slice(openThink + 7);
-            markdown = markdown.slice(0, openThink);
-        }
-        const regex = /```([\w:-]+)?\n([\s\S]*?)```|<think>([\s\S]*?)<\/think>/g;
         /**
          * @type {{type: "text" | "think" | "code"; content: string; lang: string | undefined; completed: boolean | undefined}[]}
          */
-        let result = [];
-        let lastIndex = 0;
-        let match;
-        while ((match = regex.exec(markdown)) !== null) {
-            if (match.index > lastIndex) {
-                const text = markdown.slice(lastIndex, match.index);
-                if (text.trim()) {
-                    result.push({
-                        type: "text",
-                        content: text
-                    });
+        const result = [];
+        let pos = 0;
+        let textStart = 0;
+        const pushText = end => {
+            const text = markdown.slice(textStart, end);
+            if (text.trim()) result.push({ type: "text", content: text });
+        };
+        while (pos < markdown.length) {
+            const think = markdown.indexOf("<think>", pos);
+            const fence = markdown.indexOf("```", pos);
+            if (think === -1 && fence === -1) break;
+            // Whichever of the two opens first owns everything up to its own terminator, and
+            // its body is never scanned. A construct with no terminator runs to the end and
+            // is reported incomplete
+            if (fence === -1 || (think !== -1 && think < fence)) {
+                pushText(think);
+                const close = markdown.indexOf("</think>", think + 7);
+                const content = markdown.slice(think + 7, close === -1 ? markdown.length : close);
+                if (content.trim()) {
+                    result.push({ type: "think", content: content, completed: close !== -1 });
                 }
-            }
-            if (match[0].startsWith('```')) {
-                if (match[2] && match[2].trim()) {
-                    result.push({
-                        type: "code",
-                        lang: match[1] || "",
-                        content: match[2],
-                        completed: true
-                    });
-                }
-            } else if (match[0].startsWith('<think>')) {
-                if (match[3] && match[3].trim()) {
-                    result.push({
-                        type: "think",
-                        content: match[3],
-                        completed: true
-                    });
-                }
-            }
-            lastIndex = regex.lastIndex;
-        }
-        // Handle any remaining text after the last match; the pre-pass already
-        // took any unclosed <think>, so only an unfinished code block can remain
-        if (lastIndex < markdown.length) {
-            const text = markdown.slice(lastIndex);
-            const codeStart = text.indexOf('```');
-            if (codeStart !== -1) {
-                const beforeCode = text.slice(0, codeStart);
-                if (beforeCode.trim()) {
-                    result.push({
-                        type: "text",
-                        content: beforeCode
-                    });
-                }
-                // Try to detect language after ```
-                const codeLangMatch = text.slice(codeStart + 3).match(/^([\w:-]+)?\n/);
-                let lang = "";
-                let codeContentStart = codeStart + 3;
-                if (codeLangMatch) {
-                    lang = codeLangMatch[1] || "";
-                    codeContentStart += codeLangMatch[0].length;
-                } else if (text[codeStart + 3] === '\n') {
-                    codeContentStart += 1;
-                }
-                const codeContent = text.slice(codeContentStart);
-                if (codeContent.trim()) {
+                pos = close === -1 ? markdown.length : close + 8;
+            } else {
+                pushText(fence);
+                const langMatch = markdown.slice(fence + 3).match(/^([\w:-]+)?\n/);
+                const contentStart = fence + 3 + (langMatch?.[0].length ?? 0);
+                const close = markdown.indexOf("```", contentStart);
+                const content = markdown.slice(contentStart, close === -1 ? markdown.length : close);
+                if (content.trim()) {
                     result.push({
                         type: "code",
-                        lang,
-                        content: codeContent,
-                        completed: false
+                        lang: langMatch?.[1] ?? "",
+                        content: content,
+                        completed: close !== -1
                     });
                 }
-            } else if (text.trim()) {
-                result.push({
-                    type: "text",
-                    content: text
-                });
+                pos = close === -1 ? markdown.length : close + 3;
             }
+            textStart = pos;
         }
-        if (openThinkContent !== null && openThinkContent.trim()) {
-            result.push({
-                type: "think",
-                content: openThinkContent,
-                completed: false
-            });
-        }
-        // console.log(JSON.stringify(result, null, 2));
+        pushText(markdown.length);
         return result;
     }
 
