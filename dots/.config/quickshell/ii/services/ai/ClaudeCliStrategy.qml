@@ -103,7 +103,8 @@ ApiStrategy {
         }
         if (request.sessionId.length > 0) {
             command += ` --resume '${CF.StringUtils.shellSingleQuoteEscape(request.sessionId)}'`;
-        } else if (request.systemPrompt.length > 0) {
+        }
+        if (request.systemPrompt.length > 0) {
             command += ` --append-system-prompt '${CF.StringUtils.shellSingleQuoteEscape(request.systemPrompt)}'`;
         }
         // exec so the stop button's kill reaches claude itself, not just the wrapping bash
