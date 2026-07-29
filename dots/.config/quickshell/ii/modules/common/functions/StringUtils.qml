@@ -135,6 +135,53 @@ Singleton {
     }
 
     /**
+     * Closes the open strings and brackets of truncated JSON.
+     * @param { string } s
+     * @returns { string | null } null when the string is cut mid-escape
+     */
+    function closeJson(s) {
+        let stack = [];
+        let inStr = false;
+        for (let i = 0; i < s.length; i++) {
+            const c = s[i];
+            if (inStr) {
+                if (c === '\\') {
+                    if (i + 1 >= s.length) return null;
+                    i++;
+                    continue;
+                }
+                if (c === '"') inStr = false;
+                continue;
+            }
+            if (c === '"') inStr = true;
+            else if (c === '{' || c === '[') stack.push(c);
+            else if (c === '}' || c === ']') stack.pop();
+        }
+        let out = s;
+        if (inStr) out += '"';
+        out = out.replace(/,\s*$/, "");
+        for (let i = stack.length - 1; i >= 0; i--) {
+            out += stack[i] === '{' ? '}' : ']';
+        }
+        return out;
+    }
+
+    /**
+     * Parses JSON that may still be streaming, chopping back past dangling keys, colons
+     * and partial literals until closing the remainder succeeds.
+     * @param { string } s
+     * @returns { any } null when no prefix parses
+     */
+    function parsePartialJson(s) {
+        for (let end = s.length; end > 0 && end > s.length - 64; end--) {
+            const closed = root.closeJson(s.slice(0, end));
+            if (closed === null) continue;
+            try { return JSON.parse(closed); } catch (e) {}
+        }
+        return null;
+    }
+
+    /**
      * Returns the original string with backslashes escaped
      * @param { string } str
      * @returns { string }

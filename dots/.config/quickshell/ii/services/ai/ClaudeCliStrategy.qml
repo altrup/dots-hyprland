@@ -153,32 +153,11 @@ ApiStrategy {
         message.rawContent = CF.StringUtils.editCommandFence(message.rawContent, tool.ordinal, swap);
     }
 
+    // Tools that take a command show it as the fence body; the rest show their whole input,
+    // so the body stays valid JSON for delegates that parse it back
     function commandSummary(tool) {
-        if (tool.input !== undefined) return tool.input?.command ?? JSON.stringify(tool.input ?? {});
-        return partialStringField(tool.inputJson, "command") ?? tool.inputJson;
-    }
-
-    // Value of a string field in incomplete JSON, tolerating a cut mid-escape
-    function partialStringField(json, field) {
-        const start = json.match(new RegExp(`"${field}"\\s*:\\s*"`));
-        if (!start) return null;
-        let out = "";
-        for (let i = start.index + start[0].length; i < json.length; i++) {
-            const c = json[i];
-            if (c === '"') break;
-            if (c !== '\\') { out += c; continue; }
-            const esc = json[++i];
-            if (esc === undefined) break;
-            if (esc === 'n') out += '\n';
-            else if (esc === 't') out += '\t';
-            else if (esc === 'u') {
-                const hex = json.slice(i + 1, i + 5);
-                if (hex.length < 4) break;
-                out += String.fromCharCode(parseInt(hex, 16));
-                i += 4;
-            } else out += esc;
-        }
-        return out;
+        const input = tool.input ?? CF.StringUtils.parsePartialJson(tool.inputJson) ?? {};
+        return input.command ?? JSON.stringify(input);
     }
 
     function parseResponseLine(line, message) {

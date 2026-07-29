@@ -26,60 +26,20 @@ ColumnLayout {
 
     property bool submitted: (segmentLang ?? "").split(":").includes("answered")
     property bool dismissed: (segmentLang ?? "").split(":").includes("denied")
-    // Parsed tolerantly while the tool input streams, so the box renders progressively;
-    // the last good parse is kept when a prefix is momentarily unparseable
-    property var parsed: null
+    // The strategy re-closes the still-streaming tool input before writing it, so the body is
+    // always valid JSON and the box renders progressively off a plain parse
+    property var parsed: {
+        try {
+            return JSON.parse(String(root.segmentContent ?? ""));
+        } catch (e) {
+            return null;
+        }
+    }
     property var questions: parsed?.questions ?? []
     property bool interactive: isPendingCommand && (messageData?.functionPending ?? false) && !submitted && !dismissed
     // While the tool input is still streaming (before the permission handshake), the
     // controls render disabled so the box has its final geometry from the start
     property bool streamingPreview: !submitted && !dismissed && !interactive && !(messageData?.done ?? true)
-    onSegmentContentChanged: reparse()
-    Component.onCompleted: reparse()
-
-    function reparse() {
-        const result = parsePartialJson(String(segmentContent ?? ""));
-        if (result !== null) parsed = result;
-    }
-
-    // Closes open strings and brackets of truncated JSON; null means cut mid-escape
-    function closeJson(s) {
-        let stack = [];
-        let inStr = false;
-        for (let i = 0; i < s.length; i++) {
-            const c = s[i];
-            if (inStr) {
-                if (c === '\\') {
-                    if (i + 1 >= s.length) return null;
-                    i++;
-                    continue;
-                }
-                if (c === '"') inStr = false;
-                continue;
-            }
-            if (c === '"') inStr = true;
-            else if (c === '{' || c === '[') stack.push(c);
-            else if (c === '}' || c === ']') stack.pop();
-        }
-        let out = s;
-        if (inStr) out += '"';
-        out = out.replace(/,\s*$/, "");
-        for (let i = stack.length - 1; i >= 0; i--) {
-            out += stack[i] === '{' ? '}' : ']';
-        }
-        return out;
-    }
-
-    // Chops back past dangling keys/colons/partial literals until a close succeeds
-    function parsePartialJson(s) {
-        for (let end = s.length; end > 0 && end > s.length - 64; end--) {
-            const closed = closeJson(s.slice(0, end));
-            if (closed === null) continue;
-            try { return JSON.parse(closed); } catch (e) {}
-        }
-        return null;
-    }
-
     function chosenLabels(question) {
         if (root.interactive) return Ai.questionSelections[question] ?? [];
         const answer = root.parsed?.answers?.[question];
@@ -119,15 +79,15 @@ ColumnLayout {
         }
     }
 
-    StyledText { // Input still streaming, nothing parseable yet
-        visible: root.parsed === null
+    StyledText { // Input still streaming, no question parsed yet
+        visible: root.questions.length === 0
         font.pixelSize: Appearance.font.pixelSize.small
         color: Appearance.colors.colSubtext
         text: Translation.tr("Preparing question...")
     }
 
     Rectangle { // Title bar, mirrors the command block header
-        visible: root.parsed !== null
+        visible: root.questions.length > 0
         Layout.fillWidth: true
         topLeftRadius: Appearance.rounding.small
         topRightRadius: Appearance.rounding.small
@@ -171,7 +131,7 @@ ColumnLayout {
     }
 
     Rectangle { // Questions, option pills, and the Submit/Dismiss pair
-        visible: root.parsed !== null
+        visible: root.questions.length > 0
         Layout.fillWidth: true
         topLeftRadius: Appearance.rounding.unsharpen
         topRightRadius: Appearance.rounding.unsharpen
