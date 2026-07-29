@@ -64,17 +64,29 @@ ApiStrategy {
         });
     }
 
-    function buildPermissionResponse(permissionRequest, allow: bool): string {
+    function buildPermissionResponse(permissionRequest, allow, updatedInput): string {
         return JSON.stringify({
             type: "control_response",
             response: {
                 subtype: "success",
                 request_id: permissionRequest.requestId,
                 response: allow
-                    ? { behavior: "allow", updatedInput: permissionRequest.input }
+                    ? { behavior: "allow", updatedInput: updatedInput ?? permissionRequest.input }
                     : { behavior: "deny", message: "User rejected this command" }
             }
         });
+    }
+
+    // Encodes the AskUserQuestion answer contract for updatedInput: {questions, answers}
+    // keyed by question text, multiSelect labels joined with ", ", skipped questions
+    // (no selection) omitted
+    function buildQuestionAnswers(questions, selections): var {
+        const answers = {};
+        for (const q of questions) {
+            const answer = (selections[q.question] ?? []).join(", ");
+            if (answer.length > 0) answers[q.question] = answer;
+        }
+        return { questions: questions, answers: answers };
     }
 
     function finalizeScriptContent(scriptContent: string): string {

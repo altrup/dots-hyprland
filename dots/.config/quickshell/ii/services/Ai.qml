@@ -53,6 +53,14 @@ Singleton {
     readonly property bool busy: requester.running
     // Pending CLI tool-permission request awaiting user approval: {requestId, input}
     property var pendingCliPermission: null
+    // Questions of a pending AskUserQuestion call. Selections hold each question's
+    // picked labels (or free text); the set submits as one permission response when
+    // the user hits Submit, and questions left unselected are skipped.
+    readonly property var pendingQuestions: pendingCliPermission?.input?.questions ?? null
+    property var questionSelections: ({})
+    onPendingCliPermissionChanged: {
+        questionSelections = ({});
+    }
     property var postResponseHook
     property real temperature: Persistent.states?.ai?.temperature ?? 0.5
     property QtObject tokenCount: QtObject {
@@ -909,24 +917,73 @@ Singleton {
     }
 
     // CLI permission requests are answered over the running process's stdin
-    function answerCliPermission(allow: bool): bool {
+    function answerCliPermission(allow, updatedInput): bool {
         if (!root.pendingCliPermission) return false;
-        requester.write(requester.currentStrategy.buildPermissionResponse(root.pendingCliPermission, allow) + "\n");
+        requester.write(requester.currentStrategy.buildPermissionResponse(root.pendingCliPermission, allow, updatedInput) + "\n");
         root.pendingCliPermission = null;
         return true;
     }
 
-    // Appends the :denied flag to the pending command fence's info string, so the
-    // decision persists in the transcript and the block title renders it
-    function markCommandDenied(message: AiMessageData) {
+    // multiSelect chip toggle: adds/removes one label in the question's pick list
+    function toggleQuestionOption(question: string, label: string) {
+        const list = (root.questionSelections[question] ?? []).slice();
+        const i = list.indexOf(label);
+        if (i >= 0) list.splice(i, 1); else list.push(label);
+        setQuestionSelection(question, list);
+    }
+
+    function setQuestionSelection(question: string, labels: list<string>) {
+        const selections = Object.assign({}, root.questionSelections);
+        selections[question] = labels;
+        root.questionSelections = selections;
+    }
+
+    // Sends the one permission response for the whole question set; the strategy
+    // encodes the answers, omitting (skipping) questions with no selection
+    function submitQuestions(message: AiMessageData) {
+        if (!message.functionPending || !root.pendingQuestions) return;
+        const questions = root.pendingQuestions;
+        const updatedInput = requester.currentStrategy.buildQuestionAnswers(
+            questions, root.questionSelections);
+        message.functionPending = false;
+        markQuestionAnswered(message, questions, updatedInput.answers);
+        answerCliPermission(true, updatedInput);
+    }
+
+    // Declines the whole question set; the model continues with no answers
+    function dismissQuestions(message: AiMessageData) {
+        if (!message.functionPending) return;
+        message.functionPending = false;
+        if (answerCliPermission(false)) markCommandDenied(message);
+    }
+
+    // Rewrites the pending command fence (by pendingCommandIndex ordinal) in both
+    // content and rawContent. Empty-bodied fences are skipped so the ordinal counts
+    // the same fences splitMarkdownBlocks renders
+    function editPendingCommandFence(message: AiMessageData, transform) {
         const index = message.pendingCommandIndex ?? -1;
         if (index < 0) return;
-        let seen = 0;
-        const mark = content => content.replace(/```command((?::[\w-]+)*)\n/g,
-            m => (seen++ === index) ? m.replace(/\n$/, ":denied\n") : m);
-        message.content = mark(message.content);
-        seen = 0;
-        message.rawContent = mark(message.rawContent);
+        const edit = content => {
+            let seen = 0;
+            return content.replace(/```command(?::[\w-]+)*\n([\s\S]*?)```/g,
+                (m, body) => body.trim().length === 0 ? m
+                    : (seen++ === index) ? transform(m) : m);
+        };
+        message.content = edit(message.content);
+        message.rawContent = edit(message.rawContent);
+    }
+
+    // Rewrites the fence body to {questions, answers} and flags it :answered, so the
+    // transcript renders the chosen answers instead of a stale interactive card
+    function markQuestionAnswered(message: AiMessageData, questions, answers) {
+        editPendingCommandFence(message, () => "```command:AskUserQuestion:answered\n"
+            + JSON.stringify({ questions: questions, answers: answers }) + "\n```");
+    }
+
+    // Appends the :denied flag to the fence's info string, so the decision
+    // persists in the transcript and the block title renders it
+    function markCommandDenied(message: AiMessageData) {
+        editPendingCommandFence(message, m => m.replace(/\n/, ":denied\n"));
     }
 
     function rejectCommand(message: AiMessageData) {

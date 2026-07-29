@@ -284,6 +284,10 @@ ColumnLayout {
                         Item { Layout.fillWidth: true }
                         ButtonGroup {
                             GroupButton {
+                                // The default hover (colLayer1Hover) is invisible on the
+                                // block's colLayer2 background
+                                colBackgroundHover: Appearance.colors.colLayer2Hover
+                                colBackgroundActive: Appearance.colors.colLayer2Active
                                 contentItem: StyledText {
                                     text: Translation.tr("Reject")
                                     font.pixelSize: Appearance.font.pixelSize.small

@@ -27,6 +27,10 @@ Item {
     }
 
     Keys.onPressed: event => {
+        // Don't yank focus out of another editable field (e.g. a question's
+        // free-text pill) — bare modifier presses bubble up here too
+        const focused = root.Window.activeFocusItem;
+        if (focused && focused !== messageInputField && focused.cursorVisible !== undefined) return;
         messageInputField.forceActiveFocus();
         if (event.modifiers === Qt.NoModifier) {
             if (event.key === Qt.Key_PageUp) {
@@ -355,6 +359,12 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 z: 1
                 target: messageListView
                 vertical: true
+            }
+
+            MouseArea { // Click on empty space to refocus the input (unfocuses question text pills)
+                anchors.fill: parent
+                z: -1
+                onPressed: root.inputField.forceActiveFocus()
             }
 
             StyledListView { // Message list

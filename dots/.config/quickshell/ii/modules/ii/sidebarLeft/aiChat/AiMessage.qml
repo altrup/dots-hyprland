@@ -20,11 +20,14 @@ Rectangle {
     property bool renderMarkdown: true
     property bool editing: false
 
+    // AskUserQuestion fences get their own delegate; other command fences render as code
     property list<var> messageBlocks: StringUtils.splitMarkdownBlocks(root.messageData?.content)
+        .map(block => (block.type === "code" && block.lang?.startsWith("command:AskUserQuestion"))
+            ? Object.assign({}, block, { type: "question" }) : block)
     // Block index of the command fence awaiting approval (messageData.pendingCommandIndex
     // counts command fences, not blocks)
     property int pendingCommandBlockIndex: messageBlocks
-        .map((block, i) => (block.type === "code" && block.lang?.split(":")[0] === "command") ? i : -1)
+        .map((block, i) => (block.lang?.split(":")[0] === "command") ? i : -1)
         .filter(i => i >= 0)[root.messageData?.pendingCommandIndex ?? -1] ?? -1
 
     anchors.left: parent?.left
@@ -286,6 +289,12 @@ Rectangle {
                         editing: root.editing
                         renderMarkdown: root.renderMarkdown
                         enableMouseSelection: root.enableMouseSelection
+                        segmentContent: modelData.content
+                        segmentLang: modelData.lang
+                        messageData: root.messageData
+                        isPendingCommand: index === root.pendingCommandBlockIndex
+                    } }
+                    DelegateChoice { roleValue: "question"; MessageQuestionBlock {
                         segmentContent: modelData.content
                         segmentLang: modelData.lang
                         messageData: root.messageData
