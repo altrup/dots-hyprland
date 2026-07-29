@@ -958,19 +958,11 @@ Singleton {
     }
 
     // Rewrites the pending command fence (by pendingCommandIndex ordinal) in both
-    // content and rawContent. Empty-bodied fences are skipped so the ordinal counts
-    // the same fences splitMarkdownBlocks renders
+    // content and rawContent
     function editPendingCommandFence(message: AiMessageData, transform) {
         const index = message.pendingCommandIndex ?? -1;
-        if (index < 0) return;
-        const edit = content => {
-            let seen = 0;
-            return content.replace(/```command(?::[\w-]+)*\n([\s\S]*?)```/g,
-                (m, body) => body.trim().length === 0 ? m
-                    : (seen++ === index) ? transform(m) : m);
-        };
-        message.content = edit(message.content);
-        message.rawContent = edit(message.rawContent);
+        message.content = CF.StringUtils.editCommandFence(message.content, index, transform);
+        message.rawContent = CF.StringUtils.editCommandFence(message.rawContent, index, transform);
     }
 
     // Rewrites the fence body to {questions, answers} and flags it :answered, so the
@@ -980,10 +972,16 @@ Singleton {
             + JSON.stringify({ questions: questions, answers: answers }) + "\n```");
     }
 
-    // Appends the :denied flag to the fence's info string, so the decision
-    // persists in the transcript and the block title renders it
+    // Replaces the fence's state token, so the decision persists in the transcript
+    // and the block title renders it
     function markCommandDenied(message: AiMessageData) {
-        editPendingCommandFence(message, m => m.replace(/\n/, ":denied\n"));
+        editPendingCommandFence(message, m => CF.StringUtils.withCommandFenceState(m, "denied"));
+    }
+
+    // Approval is the only thing standing between "pending" and the tool actually
+    // running; the result event takes it from there
+    function markCommandRunning(message: AiMessageData) {
+        editPendingCommandFence(message, m => CF.StringUtils.withCommandFenceState(m, "running"));
     }
 
     function rejectCommand(message: AiMessageData) {
@@ -999,7 +997,10 @@ Singleton {
     function approveCommand(message: AiMessageData) {
         if (!message.functionPending) return;
         message.functionPending = false; // User decided, no more "thinking"
-        if (answerCliPermission(true)) return;
+        if (answerCliPermission(true)) {
+            markCommandRunning(message);
+            return;
+        }
 
         const responseMessage = createFunctionOutputMessage(message.functionName, "", false);
         const id = idForMessage(responseMessage);

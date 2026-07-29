@@ -65,6 +65,10 @@ ApiStrategy {
     }
 
     function buildPermissionResponse(permissionRequest, allow, updatedInput): string {
+        // A denial still comes back as an error tool_result; recording the decision here
+        // stops that result from relabelling the fence as failed
+        const tool = pendingTools[permissionRequest.toolUseId];
+        if (tool) tool.state = allow ? "running" : "denied";
         return JSON.stringify({
             type: "control_response",
             response: {
@@ -122,6 +126,7 @@ ApiStrategy {
             name: name,
             inputJson: "",
             open: true,
+            state: "running",
             ordinal: commandFenceCount(message.content),
             fenceStart: message.content.length,
             rawFenceStart: message.rawContent.length,
@@ -134,9 +139,17 @@ ApiStrategy {
     // Valid only while the fence is the message tail: from registerTool until the
     // block's stop event (tool.open), plus the stop event's own final rewrite
     function rewriteFence(message, tool) {
-        const fence = `\n\n\`\`\`command:${tool.name}\n${commandSummary(tool)}\n\`\`\`\n\n`;
+        const fence = `\n\n\`\`\`command:${tool.name}:${tool.state}\n${commandSummary(tool)}\n\`\`\`\n\n`;
         message.content = message.content.slice(0, tool.fenceStart) + fence;
         message.rawContent = message.rawContent.slice(0, tool.rawFenceStart) + fence;
+    }
+
+    // Results land after the block's stop event, by which point the fence is no longer
+    // the message tail, so the state token is swapped in place by ordinal instead
+    function setFenceState(message, tool) {
+        const swap = fence => CF.StringUtils.withCommandFenceState(fence, tool.state);
+        message.content = CF.StringUtils.editCommandFence(message.content, tool.ordinal, swap);
+        message.rawContent = CF.StringUtils.editCommandFence(message.rawContent, tool.ordinal, swap);
     }
 
     function commandSummary(tool) {
@@ -220,20 +233,45 @@ ApiStrategy {
                 return {};
             }
 
+            // Tool results ride on "user" lines and settle the fence's state
+            if (dataJson.type === "user") {
+                const blocks = dataJson.message?.content;
+                if (Array.isArray(blocks)) {
+                    for (const block of blocks) {
+                        if (block.type !== "tool_result") continue;
+                        const tool = pendingTools[block.tool_use_id];
+                        // AskUserQuestion keeps its own delegate and :answered end state
+                        if (!tool || tool.state !== "running" || tool.name === "AskUserQuestion") continue;
+                        tool.state = block.is_error ? "failed" : "done";
+                        setFenceState(message, tool);
+                    }
+                }
+                return {};
+            }
+
             if (dataJson.type === "control_request") {
                 const request = dataJson.request ?? {};
                 if (request.subtype === "can_use_tool") {
                     let tool = pendingTools[request.tool_use_id];
                     if (!tool) tool = registerTool(request.tool_use_id, request.tool_name ?? "", message);
+                    // Nothing runs until the user decides; tools that need no approval
+                    // never reach here and stay "running"
+                    tool.state = "pending";
                     if (tool.open) {
                         // The request can beat the block's stop event; its input is authoritative
                         tool.input = request.input ?? {};
                         rewriteFence(message, tool);
+                    } else {
+                        setFenceState(message, tool);
                     }
                     message.pendingCommandIndex = tool.ordinal;
                     message.functionName = request.tool_name ?? "";
                     message.functionPending = true;
-                    return { permissionRequest: { requestId: dataJson.request_id, input: request.input ?? {} } };
+                    return { permissionRequest: {
+                        requestId: dataJson.request_id,
+                        toolUseId: request.tool_use_id ?? "",
+                        input: request.input ?? {}
+                    } };
                 }
                 return {};
             }

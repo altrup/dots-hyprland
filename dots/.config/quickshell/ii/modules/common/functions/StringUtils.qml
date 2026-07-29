@@ -46,6 +46,42 @@ Singleton {
     }
 
     /**
+     * Applies a transform to the nth command fence. Empty-bodied fences are skipped so
+     * the ordinal counts the same fences splitMarkdownBlocks emits.
+     * @param { string } content
+     * @param { number } ordinal
+     * @param { (fence: string) => string } transform
+     * @returns { string }
+     */
+    function editCommandFence(content, ordinal, transform) {
+        if (ordinal < 0) return content;
+        let seen = 0;
+        return content.replace(/```command(?::[\w-]+)*\n([\s\S]*?)```/g,
+            (fence, body) => body.trim().length === 0 ? fence
+                : (seen++ === ordinal) ? transform(fence) : fence);
+    }
+
+    /**
+     * Lifecycle states a command fence's info string can end with, as command:<name>:<state>.
+     */
+    readonly property var commandFenceStates: ["pending", "running", "done", "failed", "denied", "answered"]
+
+    /**
+     * Swaps a command fence's state token, keeping whatever tool name it already carries
+     * so states replace each other instead of stacking.
+     * @param { string } fence
+     * @param { string } state
+     * @returns { string }
+     */
+    function withCommandFenceState(fence, state) {
+        return fence.replace(/^```command((?::[\w-]+)*)/, (full, flags) => {
+            const name = flags.split(":").filter(s => s.length > 0)
+                .find(s => !root.commandFenceStates.includes(s));
+            return "```command" + (name ? ":" + name : "") + ":" + state;
+        });
+    }
+
+    /**
      * Splits markdown blocks into three different types: text, think, and code.
      * @param { string } markdown
      * @returns {Array<{type: "text" | "think" | "code", content: string, lang?: string, completed?: boolean}>}
