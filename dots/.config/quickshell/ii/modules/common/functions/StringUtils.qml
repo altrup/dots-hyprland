@@ -46,11 +46,67 @@ Singleton {
     }
 
     /**
+     * Applies a transform to the nth command fence. Empty-bodied fences are skipped so
+     * the ordinal counts the same fences splitMarkdownBlocks emits.
+     * @param { string } content
+     * @param { number } ordinal
+     * @param { (fence: string) => string } transform
+     * @returns { string }
+     */
+    function editCommandFence(content, ordinal, transform) {
+        if (ordinal < 0) return content;
+        let seen = 0;
+        return content.replace(/```command(?::[\w-]+)*\n([\s\S]*?)```/g,
+            (fence, body) => body.trim().length === 0 ? fence
+                : (seen++ === ordinal) ? transform(fence) : fence);
+    }
+
+    /**
+     * Lifecycle states a command fence's info string can end with, as command:<name>:<state>.
+     */
+    readonly property var commandFenceStates: ["pending", "running", "done", "failed", "denied", "answered"]
+
+    /**
+     * Swaps a command fence's state token, keeping whatever tool name it already carries
+     * so states replace each other instead of stacking.
+     * @param { string } fence
+     * @param { string } state
+     * @returns { string }
+     */
+    function withCommandFenceState(fence, state) {
+        return fence.replace(/^```command((?::[\w-]+)*)/, (full, flags) => {
+            const name = flags.split(":").filter(s => s.length > 0)
+                .find(s => !root.commandFenceStates.includes(s));
+            return "```command" + (name ? ":" + name : "") + ":" + state;
+        });
+    }
+
+    /**
      * Splits markdown blocks into three different types: text, think, and code.
      * @param { string } markdown
      * @returns {Array<{type: "text" | "think" | "code", content: string, lang?: string, completed?: boolean}>}
      */
     function splitMarkdownBlocks(markdown) {
+        // A still-streaming thought must not let code fences inside it match as
+        // code blocks: everything from an unclosed <think> onward is one
+        // incomplete think block, and only the text before it is parsed normally
+        let openThink = -1;
+        let searchFrom = 0;
+        while (true) {
+            const start = markdown.indexOf('<think>', searchFrom);
+            if (start === -1) break;
+            const close = markdown.indexOf('</think>', start);
+            if (close === -1) {
+                openThink = start;
+                break;
+            }
+            searchFrom = close + 8;
+        }
+        let openThinkContent = null;
+        if (openThink !== -1) {
+            openThinkContent = markdown.slice(openThink + 7);
+            markdown = markdown.slice(0, openThink);
+        }
         const regex = /```([\w:-]+)?\n([\s\S]*?)```|<think>([\s\S]*?)<\/think>/g;
         /**
          * @type {{type: "text" | "think" | "code"; content: string; lang: string | undefined; completed: boolean | undefined}[]}
@@ -88,29 +144,12 @@ Singleton {
             }
             lastIndex = regex.lastIndex;
         }
-        // Handle any remaining text after the last match
+        // Handle any remaining text after the last match; the pre-pass already
+        // took any unclosed <think>, so only an unfinished code block can remain
         if (lastIndex < markdown.length) {
             const text = markdown.slice(lastIndex);
-            // Check for unfinished <think> block
-            const thinkStart = text.indexOf('<think>');
             const codeStart = text.indexOf('```');
-            if (thinkStart !== -1 && (codeStart === -1 || thinkStart < codeStart)) {
-                const beforeThink = text.slice(0, thinkStart);
-                if (beforeThink.trim()) {
-                    result.push({
-                        type: "text",
-                        content: beforeThink
-                    });
-                }
-                const thinkContent = text.slice(thinkStart + 7);
-                if (thinkContent.trim()) {
-                    result.push({
-                        type: "think",
-                        content: thinkContent,
-                        completed: false
-                    });
-                }
-            } else if (codeStart !== -1) {
+            if (codeStart !== -1) {
                 const beforeCode = text.slice(0, codeStart);
                 if (beforeCode.trim()) {
                     result.push({
@@ -143,6 +182,13 @@ Singleton {
                     content: text
                 });
             }
+        }
+        if (openThinkContent !== null && openThinkContent.trim()) {
+            result.push({
+                type: "think",
+                content: openThinkContent,
+                completed: false
+            });
         }
         // console.log(JSON.stringify(result, null, 2));
         return result;

@@ -7,6 +7,7 @@ import qs.modules.ii.sidebarLeft.aiChat
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Window
 import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Io
@@ -27,6 +28,10 @@ Item {
     }
 
     Keys.onPressed: event => {
+        // Don't yank focus out of another editable field (e.g. a question's
+        // free-text pill) — bare modifier presses bubble up here too
+        const focused = root.Window.activeFocusItem;
+        if (focused && focused !== messageInputField && focused.cursorVisible !== undefined) return;
         messageInputField.forceActiveFocus();
         if (event.modifiers === Qt.NoModifier) {
             if (event.key === Qt.Key_PageUp) {
@@ -369,6 +374,12 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 vertical: true
             }
 
+            MouseArea { // Click on empty space to refocus the input (unfocuses question text pills)
+                anchors.fill: parent
+                z: -1
+                onPressed: root.inputField.forceActiveFocus()
+            }
+
             StyledListView { // Message list
                 id: messageListView
                 z: 0
@@ -380,6 +391,10 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 cacheBuffer: 100000000
                 topMargin: statusBg.implicitHeight + statusBg.anchors.topMargin * 2
                 bottomMargin: spacing
+
+                // A drag inside a text field is a selection, not a scroll; the field
+                // would otherwise lose the mouse grab to this list mid-selection
+                interactive: !(Window.activeFocusItem instanceof TextInput)
 
                 touchpadScrollFactor: Config.options.interactions.scrolling.touchpadScrollFactor * 1.4
                 mouseScrollFactor: Config.options.interactions.scrolling.mouseScrollFactor * 1.4

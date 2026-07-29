@@ -20,10 +20,16 @@ ColumnLayout {
     property var segmentLang: "txt"
     property var messageData: {}
     property bool isPendingCommand: false
-    // Command fences carry the tool name in the info string: command:Read, command:Bash...
+    // Command fences carry tool name then state: command:Bash:running, command:Read:done...
+    // Either segment can be absent on fences written outside the CLI path
+    property var commandFlags: (segmentLang ?? "").split(":").slice(1).filter(s => s.length > 0)
     property bool isCommandRequest: (segmentLang ?? "").split(":")[0] === "command"
-    property string commandToolName: isCommandRequest ? ((segmentLang ?? "").split(":")[1] || "Bash") : ""
-    property bool commandDenied: isCommandRequest && (segmentLang ?? "").split(":").includes("denied")
+    property string commandState: isCommandRequest
+        ? (commandFlags.filter(s => StringUtils.commandFenceStates.includes(s)).pop() ?? "")
+        : ""
+    property string commandToolName: isCommandRequest
+        ? (commandFlags.find(s => !StringUtils.commandFenceStates.includes(s)) ?? "Bash")
+        : ""
     // Bash runs shell commands; every other tool takes JSON input
     property var displayLang: isCommandRequest
         ? (commandToolName === "Bash" ? "bash" : "json")
@@ -70,18 +76,20 @@ ColumnLayout {
                         : (root.displayLang ? Repository.definitionForName(root.displayLang).name : "plain")
                 }
                 Rectangle {
-                    visible: root.commandDenied
+                    visible: root.commandState.length > 0
                     implicitWidth: 4
                     implicitHeight: 4
                     radius: implicitWidth / 2
                     color: Appearance.colors.colOnLayer1Inactive
                 }
                 StyledText {
-                    visible: root.commandDenied
+                    visible: root.commandState.length > 0
                     font.pixelSize: Appearance.font.pixelSize.small
                     font.weight: Font.DemiBold
-                    color: Appearance.colors.colError
-                    text: Translation.tr("denied")
+                    color: ["denied", "failed"].includes(root.commandState)
+                        ? Appearance.colors.colTertiary
+                        : Appearance.colors.colSubtext
+                    text: Translation.tr(root.commandState)
                 }
             }
 
@@ -251,6 +259,10 @@ ColumnLayout {
                         Item { Layout.fillWidth: true }
                         ButtonGroup {
                             GroupButton {
+                                // The default hover (colLayer1Hover) is invisible on the
+                                // block's colLayer2 background
+                                colBackgroundHover: Appearance.colors.colLayer2Hover
+                                colBackgroundActive: Appearance.colors.colLayer2Active
                                 contentItem: StyledText {
                                     text: Translation.tr("Reject")
                                     font.pixelSize: Appearance.font.pixelSize.small
