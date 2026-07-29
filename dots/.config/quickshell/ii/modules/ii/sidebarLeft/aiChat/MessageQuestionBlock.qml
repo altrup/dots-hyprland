@@ -40,10 +40,10 @@ ColumnLayout {
     // While the tool input is still streaming (before the permission handshake), the
     // controls render disabled so the box has its final geometry from the start
     property bool streamingPreview: !submitted && !dismissed && !interactive && !(messageData?.done ?? true)
+    // Picks live in the service until Submit writes them into the fence body
     function chosenLabels(question) {
         if (root.interactive) return Ai.questionSelections[question] ?? [];
-        const answer = root.parsed?.answers?.[question];
-        return typeof answer === "string" ? answer.split(", ") : [];
+        return root.parsed?.selections?.[question] ?? [];
     }
 
     // Committed answer parts that match no option label (free-text answers)

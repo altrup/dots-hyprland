@@ -927,7 +927,7 @@ Singleton {
         const updatedInput = requester.currentStrategy.buildQuestionAnswers(
             questions, root.questionSelections);
         message.functionPending = false;
-        markQuestionAnswered(message, questions, updatedInput.answers);
+        markQuestionAnswered(message, questions, root.questionSelections);
         answerCliPermission(true, updatedInput);
     }
 
@@ -939,11 +939,11 @@ Singleton {
         message.rawContent = CF.StringUtils.editCommandFence(message.rawContent, index, transform);
     }
 
-    // Rewrites the fence body to {questions, answers} and flags it :answered, so the
+    // Rewrites the fence body to {questions, selections} and flags it :answered, so the
     // transcript renders the chosen answers instead of a stale interactive card
-    function markQuestionAnswered(message: AiMessageData, questions, answers) {
+    function markQuestionAnswered(message: AiMessageData, questions, selections) {
         editPendingCommandFence(message, () => "```command:AskUserQuestion:answered\n"
-            + JSON.stringify({ questions: questions, answers: answers }) + "\n```");
+            + JSON.stringify({ questions: questions, selections: selections }) + "\n```");
     }
 
     // Replaces the fence's state token, so the decision persists in the transcript
