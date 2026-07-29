@@ -863,6 +863,9 @@ Singleton {
     }
 
     function interrupt() {
+        // A pending permission blocks the turn, so decline it first; otherwise the tool
+        // call is left unanswered in claude's session and the fence renders half-asked
+        if (root.pendingCliPermission) root.rejectCommand(requester.message);
         // CLI strategies get a graceful stop first, so claude records the partial turn
         // in its session; the timer (or a second press) hard-kills if it doesn't wind down
         if (requester.running && !interruptKillTimer.running
@@ -948,13 +951,6 @@ Singleton {
         message.functionPending = false;
         markQuestionAnswered(message, questions, updatedInput.answers);
         answerCliPermission(true, updatedInput);
-    }
-
-    // Declines the whole question set; the model continues with no answers
-    function dismissQuestions(message: AiMessageData) {
-        if (!message.functionPending) return;
-        message.functionPending = false;
-        if (answerCliPermission(false)) markCommandDenied(message);
     }
 
     // Rewrites the pending command fence (by pendingCommandIndex ordinal) in both

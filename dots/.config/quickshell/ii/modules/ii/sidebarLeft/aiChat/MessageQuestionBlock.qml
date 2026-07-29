@@ -404,7 +404,7 @@ ColumnLayout {
                             font.pixelSize: Appearance.font.pixelSize.small
                             color: Appearance.colors.colOnLayer2
                         }
-                        onClicked: Ai.dismissQuestions(root.messageData)
+                        onClicked: Ai.rejectCommand(root.messageData)
                     }
                     GroupButton {
                         enabled: root.interactive
