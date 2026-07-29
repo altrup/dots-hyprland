@@ -38,8 +38,11 @@ ColumnLayout {
     property var questions: parsed?.questions ?? []
     property bool interactive: isPendingCommand && (messageData?.functionPending ?? false) && !submitted && !dismissed
     // While the tool input is still streaming (before the permission handshake), the
-    // controls render disabled so the box has its final geometry from the start
-    property bool streamingPreview: !submitted && !dismissed && !interactive && !(messageData?.done ?? true)
+    // controls render disabled so the box has its final geometry from the start. Only the
+    // fence still streaming qualifies: a question the model abandoned keeps its :pending state
+    // for good, and must not keep offering controls just because the message runs on
+    property bool streamingPreview: (segmentLang ?? "").split(":").includes("running")
+        && !submitted && !dismissed && !interactive && !(messageData?.done ?? true)
     // Picks live in the service until Submit writes them into the fence body
     function chosenLabels(question) {
         if (root.interactive) return Ai.questionSelections[question] ?? [];
@@ -70,6 +73,7 @@ ColumnLayout {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             iconSize: Appearance.font.pixelSize.normal
+            // Only ever visible on a selected pill
             color: Appearance.colors.colOnPrimary
             text: "check"
             opacity: slot.checked ? 1 : 0
@@ -196,8 +200,6 @@ ColumnLayout {
                                 horizontalPadding: 8
                                 verticalPadding: 6
                                 toggled: root.chosenLabels(questionSection.question).includes(label)
-                                // colBackground carries the toggled fill so the chosen pill
-                                // stays highlighted in the submitted (disabled) transcript
                                 colBackground: toggled ? Appearance.colors.colPrimary : Appearance.colors.colSecondaryContainer
                                 colBackgroundHover: Appearance.colors.colSecondaryContainerHover
                                 colBackgroundActive: Appearance.colors.colSecondaryContainerActive
@@ -210,7 +212,8 @@ ColumnLayout {
                                     StyledText {
                                         font.pixelSize: Appearance.font.pixelSize.small
                                         horizontalAlignment: Text.AlignHCenter
-                                        color: optionPill.toggled ? Appearance.colors.colOnPrimary : Appearance.m3colors.m3onSurface
+                                        color: optionPill.toggled ? Appearance.colors.colOnPrimary
+                                            : Appearance.colors.colOnSecondaryContainer
                                         text: optionPill.label
                                     }
                                 }
