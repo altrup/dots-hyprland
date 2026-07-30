@@ -116,19 +116,14 @@ ApiStrategy {
         message.rawContent += text;
     }
 
-    // The same splitter the renderer uses, so ordinals can't desync from it
-    function commandFenceCount(content) {
-        return CF.StringUtils.splitMarkdownBlocks(content)
-            .filter(b => b.type === "code" && b.lang?.split(":")[0] === "command").length;
-    }
-
     function registerTool(id, name, message) {
         const tool = {
             name: name,
             inputJson: "",
             open: true,
             state: "running",
-            ordinal: commandFenceCount(message.content),
+            // This fence is about to be appended, so the fences already there are its ordinal
+            ordinal: CF.StringUtils.commandFences(message.content).length,
             fenceStart: message.content.length,
             rawFenceStart: message.rawContent.length,
         };

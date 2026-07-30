@@ -1031,8 +1031,7 @@ Singleton {
                 addFunctionOutputMessage(name, Translation.tr("Invalid arguments. Must provide `command`."));
                 return;
             }
-            message.pendingCommandIndex = CF.StringUtils.splitMarkdownBlocks(message.content)
-                .filter(b => b.type === "code" && b.lang?.split(":")[0] === "command").length;
+            message.pendingCommandIndex = CF.StringUtils.commandFences(message.content).length;
             const contentToAppend = `\n\n**${Translation.tr("Command execution request")}**\n\n\`\`\`command\n${args.command}\n\`\`\``;
             message.rawContent += contentToAppend;
             message.content += contentToAppend;

@@ -46,8 +46,25 @@ Singleton {
     }
 
     /**
-     * Applies a transform to the nth command fence. Empty-bodied fences are skipped so
-     * the ordinal counts the same fences splitMarkdownBlocks emits.
+     * Whether a block from splitMarkdownBlocks is a command fence
+     * @param { {lang?: string} } block
+     * @returns { boolean }
+     */
+    function isCommandFence(block) {
+        return block.lang?.split(":")[0] === "command";
+    }
+
+    /**
+     * All command markdown blocks in string
+     * @param { string } content
+     * @returns { Array<{content: string, lang: string, start: number, end: number}> }
+     */
+    function commandFences(content) {
+        return root.splitMarkdownBlocks(content).filter(block => root.isCommandFence(block));
+    }
+
+    /**
+     * Applies a transform to the nth command fence, passing it the whole fence text.
      * @param { string } content
      * @param { number } ordinal
      * @param { (fence: string) => string } transform
@@ -55,10 +72,11 @@ Singleton {
      */
     function editCommandFence(content, ordinal, transform) {
         if (ordinal < 0) return content;
-        let seen = 0;
-        return content.replace(/```command(?::[\w-]+)*\n([\s\S]*?)```/g,
-            (fence, body) => body.trim().length === 0 ? fence
-                : (seen++ === ordinal) ? transform(fence) : fence);
+        const fence = root.commandFences(content)[ordinal];
+        if (!fence) return content;
+        return content.slice(0, fence.start)
+            + transform(content.slice(fence.start, fence.end))
+            + content.slice(fence.end);
     }
 
     /**
@@ -95,7 +113,7 @@ Singleton {
         let textStart = 0;
         const pushText = end => {
             const text = markdown.slice(textStart, end);
-            if (text.trim()) result.push({ type: "text", content: text });
+            if (text.trim()) result.push({ type: "text", content: text, start: textStart, end: end });
         };
         while (pos < markdown.length) {
             const think = markdown.indexOf("<think>", pos);
@@ -107,26 +125,34 @@ Singleton {
             if (fence === -1 || (think !== -1 && think < fence)) {
                 pushText(think);
                 const close = markdown.indexOf("</think>", think + 7);
+                pos = close === -1 ? markdown.length : close + 8;
                 const content = markdown.slice(think + 7, close === -1 ? markdown.length : close);
                 if (content.trim()) {
-                    result.push({ type: "think", content: content, completed: close !== -1 });
+                    result.push({
+                        type: "think",
+                        content: content,
+                        completed: close !== -1,
+                        start: think,
+                        end: pos
+                    });
                 }
-                pos = close === -1 ? markdown.length : close + 8;
             } else {
                 pushText(fence);
                 const langMatch = markdown.slice(fence + 3).match(/^([\w:-]+)?\n/);
                 const contentStart = fence + 3 + (langMatch?.[0].length ?? 0);
                 const close = markdown.indexOf("```", contentStart);
+                pos = close === -1 ? markdown.length : close + 3;
                 const content = markdown.slice(contentStart, close === -1 ? markdown.length : close);
                 if (content.trim()) {
                     result.push({
                         type: "code",
                         lang: langMatch?.[1] ?? "",
                         content: content,
-                        completed: close !== -1
+                        completed: close !== -1,
+                        start: fence,
+                        end: pos
                     });
                 }
-                pos = close === -1 ? markdown.length : close + 3;
             }
             textStart = pos;
         }
