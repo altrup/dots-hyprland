@@ -99,7 +99,9 @@ ColumnLayout {
         bottomLeftRadius: root.collapsed ? Appearance.rounding.small : Appearance.rounding.unsharpen
         bottomRightRadius: bottomLeftRadius
         color: Appearance.colors.colSurfaceContainerHighest
-        implicitHeight: titleRowLayout.implicitHeight + 10 * 2
+        // Same recipe as the think and command block headers, so the three line up: the row is
+        // padded by 3 and the icon carries the rest, which keeps the chevron from setting the height
+        implicitHeight: titleRowLayout.implicitHeight + 3 * 2
 
         Behavior on bottomLeftRadius {
             NumberAnimation {
@@ -124,13 +126,16 @@ ColumnLayout {
             anchors.right: parent.right
             anchors.leftMargin: 13
             anchors.rightMargin: 10
-            spacing: 6
+            spacing: 5
 
             MaterialSymbol {
+                Layout.topMargin: 7
+                Layout.bottomMargin: 7
                 color: Appearance.colors.colOnLayer2
                 text: "question_exchange"
             }
             StyledText {
+                Layout.leftMargin: 5
                 font.pixelSize: Appearance.font.pixelSize.small
                 font.weight: Font.DemiBold
                 color: Appearance.colors.colOnLayer2
