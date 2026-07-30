@@ -121,7 +121,8 @@ ApiStrategy {
             name: name,
             inputJson: "",
             open: true,
-            state: "running",
+            // Nothing exists to run or approve yet; the state settles once the input is in
+            state: "streaming",
             // This fence is about to be appended, so the fences already there are its ordinal
             ordinal: CF.StringUtils.commandFences(message.content).length,
             fenceStart: message.content.length,
@@ -217,8 +218,12 @@ ApiStrategy {
                     for (const block of blocks) {
                         if (block.type !== "tool_result") continue;
                         const tool = pendingTools[block.tool_use_id];
-                        // AskUserQuestion keeps its own delegate and :answered end state
-                        if (!tool || tool.state !== "running" || tool.name === "AskUserQuestion") continue;
+                        // A decision the user already made stands: a denial's error result must not
+                        // relabel the fence, and AskUserQuestion keeps its own :answered end state.
+                        // Anything else settles here, including tools that needed no approval and
+                        // so never left :streaming
+                        if (!tool || ["denied", "answered"].includes(tool.state)
+                            || tool.name === "AskUserQuestion") continue;
                         tool.state = block.is_error ? "failed" : "done";
                         setFenceState(message, tool);
                     }
@@ -231,8 +236,8 @@ ApiStrategy {
                 if (request.subtype === "can_use_tool") {
                     let tool = pendingTools[request.tool_use_id];
                     if (!tool) tool = registerTool(request.tool_use_id, request.tool_name ?? "", message);
-                    // Nothing runs until the user decides; tools that need no approval
-                    // never reach here and stay "running"
+                    // Nothing runs until the user decides; tools that need no approval never
+                    // reach here and go straight from streaming to their result
                     tool.state = "pending";
                     if (tool.open) {
                         // The request can beat the block's stop event; its input is authoritative

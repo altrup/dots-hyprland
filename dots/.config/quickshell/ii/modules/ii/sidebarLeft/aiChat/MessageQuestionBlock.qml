@@ -42,7 +42,7 @@ ColumnLayout {
     // controls render disabled so the box has its final geometry from the start. Only the
     // fence still streaming qualifies: a question the model abandoned keeps its :pending state
     // for good, and must not keep offering controls just because the message runs on
-    property bool streamingPreview: (segmentLang ?? "").split(":").includes("running")
+    property bool streamingPreview: (segmentLang ?? "").split(":").includes("streaming")
         && !submitted && !dismissed && !interactive && !(messageData?.done ?? true)
     // Mirrors the command block's state. An abandoned question sits at :pending like a live one,
     // so telling them apart takes the pending-fence check rather than the token

@@ -627,7 +627,7 @@
   "running": "running",
   "done": "done",
   "failed": "failed",
-  "denied": "denied",
   "answered": "answered",
-  "unanswered": "unanswered"
+  "unanswered": "unanswered",
+  "rejected": "rejected"
 }
