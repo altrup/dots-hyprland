@@ -30,6 +30,16 @@ ColumnLayout {
     property string commandToolName: isCommandRequest
         ? (commandFlags.find(s => !StringUtils.commandFenceStates.includes(s)) ?? "Bash")
         : ""
+    // Spelled out rather than tr(commandState): the extractor only sees literal strings, so a
+    // dynamic key leaves every state untranslatable
+    readonly property var commandStateLabels: ({
+        "pending": Translation.tr("pending"),
+        "running": Translation.tr("running"),
+        "done": Translation.tr("done"),
+        "failed": Translation.tr("failed"),
+        "denied": Translation.tr("denied"),
+        "answered": Translation.tr("answered"),
+    })
     // Bash runs shell commands; every other tool takes JSON input
     property var displayLang: isCommandRequest
         ? (commandToolName === "Bash" ? "bash" : "json")
@@ -89,7 +99,7 @@ ColumnLayout {
                     color: ["denied", "failed"].includes(root.commandState)
                         ? Appearance.colors.colTertiary
                         : Appearance.colors.colSubtext
-                    text: Translation.tr(root.commandState)
+                    text: root.commandStateLabels[root.commandState] ?? root.commandState
                 }
             }
 
