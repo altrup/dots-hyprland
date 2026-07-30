@@ -636,6 +636,9 @@ Singleton {
     }
 
     function clearMessages() {
+        if (requester.running) root.interrupt();
+        requester.restartOnExit = false;
+        root.pendingCliPermission = null;
         root.messageIDs = [];
         root.messageByID = ({});
         root.tokenCount.input = -1;
