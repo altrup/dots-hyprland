@@ -400,19 +400,32 @@ Singleton {
         }
     }
 
-    // Ids added by CLI/cache discovery, so the refresh only ever removes its own
-    // models and not user-configured claude-cli entries from extraModels
+    // Tracked separately so a refresh only ever removes models it added itself, and not
+    // user-configured claude-cli entries from extraModels
     property var claudeDiscoveredIds: []
 
-    function addClaudeModels(aliases) {
+    // ClaudeCli.aliases is authoritative whenever it changes, so an alias that is gone (a stale
+    // cache entry, an alias Anthropic retired, the CLI uninstalled) takes its model with it
+    function syncClaudeModels() {
+        const aliases = ClaudeCli.aliases;
         const ids = aliases.map(alias => "claude-" + root.safeModelName(alias));
-        root.claudeDiscoveredIds = [...new Set([...root.claudeDiscoveredIds, ...ids])];
-        aliases.forEach(alias => {
-            root.addModel("claude-" + root.safeModelName(alias), {
+        const stale = root.claudeDiscoveredIds.filter(id => !ids.includes(id));
+        if (stale.length > 0) {
+            const keptModels = {};
+            Object.keys(root.models).forEach(id => {
+                if (!stale.includes(id)) keptModels[id] = root.models[id];
+            });
+            root.models = keptModels;
+        }
+        root.claudeDiscoveredIds = ids;
+        aliases.forEach((alias, i) => {
+            root.addModel(ids[i], {
                 "name": "Claude " + CF.StringUtils.toTitleCase(alias),
                 "icon": "spark-symbolic",
                 "description": Translation.tr("Online | Claude Code CLI\nAnthropic's %1 model").arg(alias),
                 "homepage": "https://claude.com/claude-code",
+                // Never requested (finalizeScriptContent discards the curl line); it marks the
+                // model as online so the local-only policy in setModel() rejects it
                 "endpoint": "https://api.anthropic.com",
                 "model": alias,
                 "requires_key": false,
@@ -421,57 +434,10 @@ Singleton {
         });
     }
 
-    // Models appear instantly from the last run's cache; the CLI query refreshes it
-    // in the background (a cold `claude` start takes a few seconds)
-    FileView {
-        id: claudeModelsCache
-        path: Directories.claudeModelListCachePath
-        watchChanges: false
-        onLoadedChanged: {
-            if (!loaded || Config.options.policies.ai === 2) return;
-            try {
-                root.addClaudeModels(JSON.parse(claudeModelsCache.text()));
-            } catch (e) {
-                console.log("Could not load cached Claude CLI models:", e);
-            }
-        }
-    }
-
-    Process {
-        id: getClaudeModels
-        // The CLI runs locally but sends chats to Anthropic, so the local-only policy excludes it
-        running: Config.options.policies.ai !== 2
-        command: ["bash", "-c", "claude -p '/model' 2>/dev/null"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                if (Config.options.policies.ai === 2) return;
-                try {
-                    // Replies like "... Available: sonnet, opus, fable, default, or a full model ID."
-                    // No usable reply (claude missing, logged out, broken) yields an empty
-                    // list, dropping every discovered model through the same path below
-                    const aliases = (text.match(/Available: ([^\n]+)/)?.[1] ?? "").split(",")
-                        .map(alias => alias.trim().replace(/\.$/, ""))
-                        // Drops the trailing "or a full model ID" and meta aliases
-                        .filter(alias => alias.length > 0 && !alias.includes(" ")
-                            && !["default", "best", "opusplan"].includes(alias));
-                    // The CLI's list is authoritative: discovered models whose alias
-                    // no longer exists (e.g. stale cache entries) are dropped
-                    const freshIds = new Set(aliases.map(alias => "claude-" + root.safeModelName(alias)));
-                    const stale = root.claudeDiscoveredIds.filter(id => !freshIds.has(id));
-                    if (stale.length > 0) {
-                        const keptModels = {};
-                        Object.keys(root.models).forEach(id => {
-                            if (!stale.includes(id)) keptModels[id] = root.models[id];
-                        });
-                        root.models = keptModels;
-                    }
-                    root.claudeDiscoveredIds = Array.from(freshIds);
-                    root.addClaudeModels(aliases);
-                    claudeModelsCache.setText(JSON.stringify(aliases));
-                } catch (e) {
-                    console.log("Could not fetch Claude CLI models:", e);
-                }
-            }
+    Connections {
+        target: ClaudeCli
+        function onAliasesChanged() {
+            root.syncClaudeModels();
         }
     }
 
@@ -576,6 +542,16 @@ Singleton {
         return models[currentModelId];
     }
 
+    // No model is a reachable state: discovery can remove the selected one, and the local-only
+    // policy with no local models leaves the list empty
+    function requireModel() {
+        const model = models[currentModelId];
+        if (!model) {
+            root.addMessage(Translation.tr("No model selected. Pick one with `%1`").arg("/model"), root.interfaceRole);
+        }
+        return model ?? null;
+    }
+
     function setModel(modelId, feedback = true, setPersistentState = true) {
         if (!modelId) modelId = ""
         modelId = modelId.toLowerCase()
@@ -626,13 +602,13 @@ Singleton {
     }
 
     function setApiKey(key) {
-        const model = models[currentModelId];
+        const model = root.requireModel();
+        if (!model) return;
         if (!model.requires_key) {
             root.addMessage(Translation.tr("%1 does not require an API key").arg(model.name), Ai.interfaceRole);
             return;
         }
         if (!key || key.length === 0) {
-            const model = models[currentModelId];
             root.addApiKeyAdvice(model)
             return;
         }
@@ -641,7 +617,8 @@ Singleton {
     }
 
     function printApiKey() {
-        const model = models[currentModelId];
+        const model = root.requireModel();
+        if (!model) return;
         if (model.requires_key) {
             const key = root.apiKeys[model.key_id];
             if (key) {
@@ -659,6 +636,9 @@ Singleton {
     }
 
     function clearMessages() {
+        if (requester.running) root.interrupt();
+        requester.restartOnExit = false;
+        root.pendingCliPermission = null;
         root.messageIDs = [];
         root.messageByID = ({});
         root.tokenCount.input = -1;
@@ -702,10 +682,11 @@ Singleton {
                 return;
             }
             requester.restartOnExit = false;
-            const model = models[currentModelId];
+            const model = root.requireModel();
+            if (!model) return;
 
             // Fetch API keys if needed
-            if (model?.requires_key && !KeyringStorage.loaded) KeyringStorage.fetchKeyringData();
+            if (model.requires_key && !KeyringStorage.loaded) KeyringStorage.fetchKeyringData();
             
             requester.currentStrategy = root.currentApiStrategy;
             requester.currentStrategy.reset(); // Reset strategy state
@@ -949,7 +930,7 @@ Singleton {
         const updatedInput = requester.currentStrategy.buildQuestionAnswers(
             questions, root.questionSelections);
         message.functionPending = false;
-        markQuestionAnswered(message, questions, updatedInput.answers);
+        markQuestionAnswered(message, questions, root.questionSelections);
         answerCliPermission(true, updatedInput);
     }
 
@@ -961,11 +942,11 @@ Singleton {
         message.rawContent = CF.StringUtils.editCommandFence(message.rawContent, index, transform);
     }
 
-    // Rewrites the fence body to {questions, answers} and flags it :answered, so the
+    // Rewrites the fence body to {questions, selections} and flags it :answered, so the
     // transcript renders the chosen answers instead of a stale interactive card
-    function markQuestionAnswered(message: AiMessageData, questions, answers) {
+    function markQuestionAnswered(message: AiMessageData, questions, selections) {
         editPendingCommandFence(message, () => "```command:AskUserQuestion:answered\n"
-            + JSON.stringify({ questions: questions, answers: answers }) + "\n```");
+            + JSON.stringify({ questions: questions, selections: selections }) + "\n```");
     }
 
     // Replaces the fence's state token, so the decision persists in the transcript
@@ -1053,8 +1034,7 @@ Singleton {
                 addFunctionOutputMessage(name, Translation.tr("Invalid arguments. Must provide `command`."));
                 return;
             }
-            message.pendingCommandIndex = CF.StringUtils.splitMarkdownBlocks(message.content)
-                .filter(b => b.type === "code" && b.lang?.split(":")[0] === "command").length;
+            message.pendingCommandIndex = CF.StringUtils.commandFences(message.content).length;
             const contentToAppend = `\n\n**${Translation.tr("Command execution request")}**\n\n\`\`\`command\n${args.command}\n\`\`\``;
             message.rawContent += contentToAppend;
             message.content += contentToAppend;

@@ -30,6 +30,20 @@ ColumnLayout {
     property string commandToolName: isCommandRequest
         ? (commandFlags.find(s => !StringUtils.commandFenceStates.includes(s)) ?? "Bash")
         : ""
+    // An un-approved request keeps its :pending token for good, so being live is checked against
+    // the message. It reads as denied because either way the command never ran
+    readonly property string state: (commandState === "pending"
+            && !(isPendingCommand && (messageData?.functionPending ?? false)))
+        ? "denied" : commandState
+    // Spelled out because the translation extractor only sees literal keys
+    readonly property var commandStateLabels: ({
+        "pending": Translation.tr("pending"),
+        "running": Translation.tr("running"),
+        "done": Translation.tr("done"),
+        "failed": Translation.tr("failed"),
+        "denied": Translation.tr("denied"),
+        "answered": Translation.tr("answered"),
+    })
     // Bash runs shell commands; every other tool takes JSON input
     property var displayLang: isCommandRequest
         ? (commandToolName === "Bash" ? "bash" : "json")
@@ -76,20 +90,20 @@ ColumnLayout {
                         : (root.displayLang ? Repository.definitionForName(root.displayLang).name : "plain")
                 }
                 Rectangle {
-                    visible: root.commandState.length > 0
+                    visible: root.state.length > 0
                     implicitWidth: 4
                     implicitHeight: 4
                     radius: implicitWidth / 2
                     color: Appearance.colors.colOnLayer1Inactive
                 }
                 StyledText {
-                    visible: root.commandState.length > 0
+                    visible: root.state.length > 0
                     font.pixelSize: Appearance.font.pixelSize.small
                     font.weight: Font.DemiBold
-                    color: ["denied", "failed"].includes(root.commandState)
+                    color: ["denied", "failed"].includes(root.state)
                         ? Appearance.colors.colTertiary
                         : Appearance.colors.colSubtext
-                    text: Translation.tr(root.commandState)
+                    text: root.commandStateLabels[root.state] ?? root.state
                 }
             }
 

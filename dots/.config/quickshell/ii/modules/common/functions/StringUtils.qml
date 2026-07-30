@@ -46,8 +46,25 @@ Singleton {
     }
 
     /**
-     * Applies a transform to the nth command fence. Empty-bodied fences are skipped so
-     * the ordinal counts the same fences splitMarkdownBlocks emits.
+     * Whether a block from splitMarkdownBlocks is a command fence
+     * @param { {lang?: string} } block
+     * @returns { boolean }
+     */
+    function isCommandFence(block) {
+        return block.lang?.split(":")[0] === "command";
+    }
+
+    /**
+     * All command markdown blocks in string
+     * @param { string } content
+     * @returns { Array<{content: string, lang: string, start: number, end: number}> }
+     */
+    function commandFences(content) {
+        return root.splitMarkdownBlocks(content).filter(block => root.isCommandFence(block));
+    }
+
+    /**
+     * Applies a transform to the nth command fence, passing it the whole fence text.
      * @param { string } content
      * @param { number } ordinal
      * @param { (fence: string) => string } transform
@@ -55,10 +72,11 @@ Singleton {
      */
     function editCommandFence(content, ordinal, transform) {
         if (ordinal < 0) return content;
-        let seen = 0;
-        return content.replace(/```command(?::[\w-]+)*\n([\s\S]*?)```/g,
-            (fence, body) => body.trim().length === 0 ? fence
-                : (seen++ === ordinal) ? transform(fence) : fence);
+        const fence = root.commandFences(content)[ordinal];
+        if (!fence) return content;
+        return content.slice(0, fence.start)
+            + transform(content.slice(fence.start, fence.end))
+            + content.slice(fence.end);
     }
 
     /**
@@ -87,111 +105,106 @@ Singleton {
      * @returns {Array<{type: "text" | "think" | "code", content: string, lang?: string, completed?: boolean}>}
      */
     function splitMarkdownBlocks(markdown) {
-        // A still-streaming thought must not let code fences inside it match as
-        // code blocks: everything from an unclosed <think> onward is one
-        // incomplete think block, and only the text before it is parsed normally
-        let openThink = -1;
-        let searchFrom = 0;
-        while (true) {
-            const start = markdown.indexOf('<think>', searchFrom);
-            if (start === -1) break;
-            const close = markdown.indexOf('</think>', start);
-            if (close === -1) {
-                openThink = start;
-                break;
-            }
-            searchFrom = close + 8;
-        }
-        let openThinkContent = null;
-        if (openThink !== -1) {
-            openThinkContent = markdown.slice(openThink + 7);
-            markdown = markdown.slice(0, openThink);
-        }
-        const regex = /```([\w:-]+)?\n([\s\S]*?)```|<think>([\s\S]*?)<\/think>/g;
         /**
          * @type {{type: "text" | "think" | "code"; content: string; lang: string | undefined; completed: boolean | undefined}[]}
          */
-        let result = [];
-        let lastIndex = 0;
-        let match;
-        while ((match = regex.exec(markdown)) !== null) {
-            if (match.index > lastIndex) {
-                const text = markdown.slice(lastIndex, match.index);
-                if (text.trim()) {
-                    result.push({
-                        type: "text",
-                        content: text
-                    });
-                }
-            }
-            if (match[0].startsWith('```')) {
-                if (match[2] && match[2].trim()) {
-                    result.push({
-                        type: "code",
-                        lang: match[1] || "",
-                        content: match[2],
-                        completed: true
-                    });
-                }
-            } else if (match[0].startsWith('<think>')) {
-                if (match[3] && match[3].trim()) {
+        const result = [];
+        let pos = 0;
+        let textStart = 0;
+        const pushText = end => {
+            const text = markdown.slice(textStart, end);
+            if (text.trim()) result.push({ type: "text", content: text, start: textStart, end: end });
+        };
+        while (pos < markdown.length) {
+            const think = markdown.indexOf("<think>", pos);
+            const fence = markdown.indexOf("```", pos);
+            if (think === -1 && fence === -1) break;
+            // Whichever of the two opens first owns everything up to its own terminator, and
+            // its body is never scanned. A construct with no terminator runs to the end and
+            // is reported incomplete
+            if (fence === -1 || (think !== -1 && think < fence)) {
+                pushText(think);
+                const close = markdown.indexOf("</think>", think + 7);
+                pos = close === -1 ? markdown.length : close + 8;
+                const content = markdown.slice(think + 7, close === -1 ? markdown.length : close);
+                if (content.trim()) {
                     result.push({
                         type: "think",
-                        content: match[3],
-                        completed: true
+                        content: content,
+                        completed: close !== -1,
+                        start: think,
+                        end: pos
                     });
                 }
-            }
-            lastIndex = regex.lastIndex;
-        }
-        // Handle any remaining text after the last match; the pre-pass already
-        // took any unclosed <think>, so only an unfinished code block can remain
-        if (lastIndex < markdown.length) {
-            const text = markdown.slice(lastIndex);
-            const codeStart = text.indexOf('```');
-            if (codeStart !== -1) {
-                const beforeCode = text.slice(0, codeStart);
-                if (beforeCode.trim()) {
-                    result.push({
-                        type: "text",
-                        content: beforeCode
-                    });
-                }
-                // Try to detect language after ```
-                const codeLangMatch = text.slice(codeStart + 3).match(/^([\w:-]+)?\n/);
-                let lang = "";
-                let codeContentStart = codeStart + 3;
-                if (codeLangMatch) {
-                    lang = codeLangMatch[1] || "";
-                    codeContentStart += codeLangMatch[0].length;
-                } else if (text[codeStart + 3] === '\n') {
-                    codeContentStart += 1;
-                }
-                const codeContent = text.slice(codeContentStart);
-                if (codeContent.trim()) {
+            } else {
+                pushText(fence);
+                const langMatch = markdown.slice(fence + 3).match(/^([\w:-]+)?\n/);
+                const contentStart = fence + 3 + (langMatch?.[0].length ?? 0);
+                const close = markdown.indexOf("```", contentStart);
+                pos = close === -1 ? markdown.length : close + 3;
+                const content = markdown.slice(contentStart, close === -1 ? markdown.length : close);
+                if (content.trim()) {
                     result.push({
                         type: "code",
-                        lang,
-                        content: codeContent,
-                        completed: false
+                        lang: langMatch?.[1] ?? "",
+                        content: content,
+                        completed: close !== -1,
+                        start: fence,
+                        end: pos
                     });
                 }
-            } else if (text.trim()) {
-                result.push({
-                    type: "text",
-                    content: text
-                });
             }
+            textStart = pos;
         }
-        if (openThinkContent !== null && openThinkContent.trim()) {
-            result.push({
-                type: "think",
-                content: openThinkContent,
-                completed: false
-            });
-        }
-        // console.log(JSON.stringify(result, null, 2));
+        pushText(markdown.length);
         return result;
+    }
+
+    /**
+     * Closes the open strings and brackets of truncated JSON.
+     * @param { string } s
+     * @returns { string | null } null when the string is cut mid-escape
+     */
+    function closeJson(s) {
+        let stack = [];
+        let inStr = false;
+        for (let i = 0; i < s.length; i++) {
+            const c = s[i];
+            if (inStr) {
+                if (c === '\\') {
+                    if (i + 1 >= s.length) return null;
+                    i++;
+                    continue;
+                }
+                if (c === '"') inStr = false;
+                continue;
+            }
+            if (c === '"') inStr = true;
+            else if (c === '{' || c === '[') stack.push(c);
+            else if (c === '}' || c === ']') stack.pop();
+        }
+        let out = s;
+        if (inStr) out += '"';
+        out = out.replace(/,\s*$/, "");
+        for (let i = stack.length - 1; i >= 0; i--) {
+            out += stack[i] === '{' ? '}' : ']';
+        }
+        return out;
+    }
+
+    /**
+     * Parses JSON that may still be streaming, chopping back past dangling keys, colons
+     * and partial literals until closing the remainder succeeds.
+     * @param { string } s
+     * @returns { any } null when no prefix parses
+     */
+    function parsePartialJson(s) {
+        for (let end = s.length; end > 0 && end > s.length - 64; end--) {
+            const closed = root.closeJson(s.slice(0, end));
+            if (closed === null) continue;
+            try { return JSON.parse(closed); } catch (e) {}
+        }
+        return null;
     }
 
     /**
