@@ -30,20 +30,31 @@ ColumnLayout {
     property string commandToolName: isCommandRequest
         ? (commandFlags.find(s => !StringUtils.commandFenceStates.includes(s)) ?? "Bash")
         : ""
-    // An un-approved request keeps its :pending token for good, so being live is checked against
-    // the message. It reads as denied because either way the command never ran
-    readonly property string state: (commandState === "pending"
-            && !(isPendingCommand && (messageData?.functionPending ?? false)))
-        ? "denied" : commandState
-    // Spelled out because the translation extractor only sees literal keys
+    // Unfinished states keep their token for good, so being live is checked against the message
+    // rather than read off the fence. What is left over reads as denied: the command never ran
+    readonly property string state: {
+        if (commandState === "streaming") {
+            return (messageData?.done ?? true) ? "denied" : "streaming";
+        }
+        if (commandState === "pending"
+                && !(isPendingCommand && (messageData?.functionPending ?? false))) {
+            return "denied";
+        }
+        return commandState;
+    }
+    // Spelled out because the translation extractor only sees literal keys. Streaming shows
+    // nothing: there is no state to report yet, and the message has its own loading indicator
     readonly property var commandStateLabels: ({
+        "streaming": "",
         "pending": Translation.tr("pending"),
         "running": Translation.tr("running"),
         "done": Translation.tr("done"),
         "failed": Translation.tr("failed"),
-        "denied": Translation.tr("denied"),
+        // Labelled for the Reject button that produces it, as the rest of the copy already is
+        "denied": Translation.tr("rejected"),
         "answered": Translation.tr("answered"),
     })
+    readonly property string stateLabel: commandStateLabels[state] ?? state
     // Bash runs shell commands; every other tool takes JSON input
     property var displayLang: isCommandRequest
         ? (commandToolName === "Bash" ? "bash" : "json")
@@ -90,20 +101,20 @@ ColumnLayout {
                         : (root.displayLang ? Repository.definitionForName(root.displayLang).name : "plain")
                 }
                 Rectangle {
-                    visible: root.state.length > 0
+                    visible: root.stateLabel.length > 0
                     implicitWidth: 4
                     implicitHeight: 4
                     radius: implicitWidth / 2
                     color: Appearance.colors.colOnLayer1Inactive
                 }
                 StyledText {
-                    visible: root.state.length > 0
+                    visible: root.stateLabel.length > 0
                     font.pixelSize: Appearance.font.pixelSize.small
                     font.weight: Font.DemiBold
                     color: ["denied", "failed"].includes(root.state)
                         ? Appearance.colors.colTertiary
                         : Appearance.colors.colSubtext
-                    text: root.commandStateLabels[root.state] ?? root.state
+                    text: root.stateLabel
                 }
             }
 

@@ -82,7 +82,7 @@ Singleton {
     /**
      * Lifecycle states a command fence's info string can end with, as command:<name>:<state>.
      */
-    readonly property var commandFenceStates: ["pending", "running", "done", "failed", "denied", "answered"]
+    readonly property var commandFenceStates: ["streaming", "pending", "running", "done", "failed", "denied", "answered"]
 
     /**
      * Swaps a command fence's state token, keeping whatever tool name it already carries
