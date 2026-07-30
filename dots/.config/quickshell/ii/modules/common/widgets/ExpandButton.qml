@@ -3,8 +3,8 @@ import qs.modules.common.functions
 import QtQuick
 
 /**
- * Chevron that points down when collapsed and up when expanded. Toggling is the caller's job,
- * so the same click can be handled by a surrounding header too.
+ * Chevron pointing down when collapsed, up when expanded. The caller owns the toggle, so a
+ * surrounding header can handle the same click.
  */
 RippleButton {
     id: root

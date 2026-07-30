@@ -628,5 +628,6 @@
   "done": "done",
   "failed": "failed",
   "denied": "denied",
-  "answered": "answered"
+  "answered": "answered",
+  "unanswered": "unanswered"
 }

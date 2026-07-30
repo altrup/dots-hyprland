@@ -14,8 +14,9 @@ import Quickshell
  * a free-text pill, and a Submit/Dismiss pair modeled after command
  * approval. Submit sends one permission response; questions with no selection
  * are skipped. Dismiss denies the request. The fence body is the tool's JSON
- * input; once submitted it is rewritten to {questions, answers} with an
- * :answered flag and renders statically.
+ * input; once submitted it is rewritten to {questions, selections} with an
+ * :answered flag and renders statically. The header carries the outcome and the
+ * box collapses, folding itself away if the model abandons the question.
  */
 ColumnLayout {
     id: root
@@ -43,8 +44,26 @@ ColumnLayout {
     // for good, and must not keep offering controls just because the message runs on
     property bool streamingPreview: (segmentLang ?? "").split(":").includes("running")
         && !submitted && !dismissed && !interactive && !(messageData?.done ?? true)
-    // Defaults open: unlike a thought, a question is addressed to the user
-    property bool collapsed: false
+    // Mirrors the command block's state. An abandoned question sits at :pending like a live one,
+    // so telling them apart takes the pending-fence check rather than the token
+    readonly property string state: {
+        if (root.submitted) return "answered";
+        if (root.dismissed) return "dismissed";
+        if (root.streamingPreview) return "streaming";
+        return root.interactive ? "pending" : "unanswered";
+    }
+    readonly property var stateLabels: ({
+        "pending": Translation.tr("pending"),
+        "unanswered": Translation.tr("unanswered"),
+        "answered": Translation.tr("answered"),
+        "dismissed": Translation.tr("dismissed"),
+    })
+    // Streaming has no label: the message's own loading indicator already says as much
+    readonly property string stateLabel: root.stateLabels[root.state] ?? ""
+
+    // Open by default since a question is addressed to the user; a spent one folds away.
+    // Clicking the header replaces this binding
+    property bool collapsed: root.state === "unanswered"
     property var collapseAnimation: questionContentColumn.implicitHeight > 40
         ? Appearance.animation.elementMoveEnter : Appearance.animation.elementMoveFast
 
@@ -99,8 +118,7 @@ ColumnLayout {
         bottomLeftRadius: root.collapsed ? Appearance.rounding.small : Appearance.rounding.unsharpen
         bottomRightRadius: bottomLeftRadius
         color: Appearance.colors.colSurfaceContainerHighest
-        // Same recipe as the think and command block headers, so the three line up: the row is
-        // padded by 3 and the icon carries the rest, which keeps the chevron from setting the height
+        // Row padded by 3 with the icon carrying the rest, as in the think and command headers
         implicitHeight: titleRowLayout.implicitHeight + 3 * 2
 
         Behavior on bottomLeftRadius {
@@ -142,18 +160,20 @@ ColumnLayout {
                 text: root.questions.length > 1 ? Translation.tr("Questions") : Translation.tr("Question")
             }
             Rectangle {
-                visible: root.dismissed
+                visible: root.stateLabel.length > 0
                 implicitWidth: 4
                 implicitHeight: 4
                 radius: implicitWidth / 2
                 color: Appearance.colors.colOnLayer1Inactive
             }
             StyledText {
-                visible: root.dismissed
+                visible: root.stateLabel.length > 0
                 font.pixelSize: Appearance.font.pixelSize.small
                 font.weight: Font.DemiBold
-                color: Appearance.colors.colError
-                text: Translation.tr("dismissed")
+                // As in the command block, the outcomes that cost the user something stand out
+                color: ["unanswered", "dismissed"].includes(root.state)
+                    ? Appearance.colors.colTertiary : Appearance.colors.colSubtext
+                text: root.stateLabel
             }
             Item { Layout.fillWidth: true }
             ExpandButton {
