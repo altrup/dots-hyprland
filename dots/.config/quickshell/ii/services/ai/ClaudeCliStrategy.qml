@@ -156,8 +156,10 @@ ApiStrategy {
     // Tools that take a command show it as the fence body; the rest show their whole input,
     // so the body stays valid JSON for delegates that parse it back
     function commandSummary(tool) {
-        const input = tool.input ?? CF.StringUtils.parsePartialJson(tool.inputJson) ?? {};
-        return input.command ?? JSON.stringify(input);
+        const input = tool.input ?? CF.StringUtils.parsePartialJson(tool.inputJson);
+        if (!input) return tool.lastSummary ?? "{}";
+        tool.lastSummary = input.command ?? JSON.stringify(input);
+        return tool.lastSummary;
     }
 
     function parseResponseLine(line, message) {
