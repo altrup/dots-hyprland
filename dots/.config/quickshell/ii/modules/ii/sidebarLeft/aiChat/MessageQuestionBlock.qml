@@ -83,13 +83,6 @@ ColumnLayout {
         }
     }
 
-    StyledText { // Input still streaming, no question parsed yet
-        visible: root.questions.length === 0
-        font.pixelSize: Appearance.font.pixelSize.small
-        color: Appearance.colors.colSubtext
-        text: Translation.tr("Preparing question...")
-    }
-
     Rectangle { // Title bar, mirrors the command block header
         visible: root.questions.length > 0
         Layout.fillWidth: true
