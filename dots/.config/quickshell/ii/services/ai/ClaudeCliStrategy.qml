@@ -18,6 +18,29 @@ ApiStrategy {
     property string currentToolId: ""
     property var pendingTools: ({})
     property bool interruptRequested: false
+    // A tool whose input is complete is running, unless it turns out to want approval first.
+    // The permission request can trail the block's stop, so each tool waits out its own delay
+    // before taking the label; one that settles inside the delay never shows it at all
+    property int promotionDelay: 150
+    property var promotionQueue: []
+    property var promotionMessage: null
+    property Timer promotionTimer: Timer {
+        interval: 50
+        repeat: true
+        onTriggered: {
+            const now = Date.now();
+            promotionQueue = promotionQueue.filter(entry => {
+                if (now < entry.due) return true;
+                const tool = pendingTools[entry.id];
+                if (tool && tool.state === "streaming") {
+                    tool.state = "running";
+                    rewriteFence(promotionMessage, tool);
+                }
+                return false;
+            });
+            if (promotionQueue.length === 0) stop();
+        }
+    }
 
     function buildEndpoint(model: AiModel): string { return "" }
     function buildAuthorizationHeader(apiKeyEnvVarName: string): string { return "" }
@@ -150,6 +173,12 @@ ApiStrategy {
         return (tool.lastSummary?.length > 0) ? tool.lastSummary : "{}";
     }
 
+    function queuePromotion(id, message) {
+        promotionQueue = promotionQueue.concat([{ id: id, due: Date.now() + promotionDelay }]);
+        promotionMessage = message;
+        if (!promotionTimer.running) promotionTimer.start();
+    }
+
     function parseResponseLine(line, message) {
         try {
             const dataJson = JSON.parse(line);
@@ -195,6 +224,7 @@ ApiStrategy {
                                 try { tool.input = JSON.parse(tool.inputJson); } catch (e) {}
                             }
                             rewriteFence(message, tool);
+                            queuePromotion(currentToolId, message);
                         }
                         currentToolId = "";
                     }
@@ -280,14 +310,15 @@ ApiStrategy {
             inThinkingBlock = false;
             appendContent(message, "\n</think>\n\n");
         }
-        // An interrupt can also land mid-input, before the tool ever asked for approval, leaving a
-        // fence claiming to still be streaming for good. Stopping the turn refuses it; ending any
-        // other way means it never got to run
+        // An interrupt can also land mid-input or mid-execution, leaving a fence unsettled for
+        // good. Stopping the turn refuses one that never started; a killed run reads as failed
+        promotionTimer.stop();
+        promotionQueue = [];
         const leftover = interruptRequested ? "denied" : "failed";
         Object.keys(pendingTools).forEach(id => {
             const tool = pendingTools[id];
-            if (tool.state !== "streaming") return;
-            tool.state = leftover;
+            if (!["streaming", "running"].includes(tool.state)) return;
+            tool.state = tool.state === "running" ? "failed" : leftover;
             rewriteFence(message, tool);
         });
         return {};
@@ -299,5 +330,8 @@ ApiStrategy {
         currentToolId = "";
         pendingTools = ({});
         interruptRequested = false;
+        promotionTimer.stop();
+        promotionQueue = [];
+        promotionMessage = null;
     }
 }
