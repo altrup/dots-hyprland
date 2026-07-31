@@ -27,6 +27,7 @@ ColumnLayout {
 
     property bool submitted: (segmentLang ?? "").split(":").includes("answered")
     property bool dismissed: (segmentLang ?? "").split(":").includes("denied")
+    property bool streaming: (segmentLang ?? "").split(":").includes("streaming")
     // The strategy re-closes the still-streaming tool input before writing it, so the body is
     // always valid JSON and the box renders progressively off a plain parse
     property var parsed: {
@@ -38,23 +39,16 @@ ColumnLayout {
     }
     property var questions: parsed?.questions ?? []
     property bool interactive: isPendingCommand && (messageData?.functionPending ?? false) && !submitted && !dismissed
-    // While the tool input is still streaming (before the permission handshake), the
-    // controls render disabled so the box has its final geometry from the start. Only the
-    // fence still streaming qualifies: a question the model abandoned keeps its :pending state
-    // for good, and must not keep offering controls just because the message runs on
-    property bool streamingPreview: (segmentLang ?? "").split(":").includes("streaming")
-        && !submitted && !dismissed && !interactive && !(messageData?.done ?? true)
-    // Mirrors the command block's state. An abandoned question sits at :pending like a live one,
-    // so telling them apart takes the pending-fence check rather than the token
+    // A question left un-answered reads as dismissed like an explicitly dismissed one: either way
+    // it is spent, and the fence alone cannot tell them apart since both sit at :pending
     readonly property string state: {
         if (root.submitted) return "answered";
-        if (root.dismissed) return "dismissed";
-        if (root.streamingPreview) return "streaming";
-        return root.interactive ? "pending" : "unanswered";
+        if (root.streaming) return "streaming";
+        if (root.dismissed || !root.interactive) return "dismissed";
+        return "pending";
     }
     readonly property var stateLabels: ({
         "pending": Translation.tr("pending"),
-        "unanswered": Translation.tr("unanswered"),
         "answered": Translation.tr("answered"),
         "dismissed": Translation.tr("dismissed"),
     })
@@ -63,7 +57,7 @@ ColumnLayout {
 
     // Open by default since a question is addressed to the user; a spent one folds away.
     // Clicking the header replaces this binding
-    property bool collapsed: root.state === "unanswered"
+    property bool collapsed: root.state === "dismissed"
     property var collapseAnimation: questionContentColumn.implicitHeight > 40
         ? Appearance.animation.elementMoveEnter : Appearance.animation.elementMoveFast
 
@@ -82,6 +76,7 @@ ColumnLayout {
     // The gap between the two cards lives in the collapsing wrapper, so it closes with them
     spacing: 0
     property real questionBlockComponentSpacing: 2
+    property real pillTextInset: 8
 
     // Animated slot for the multiSelect checkmark: its width changes continuously,
     // so the pill and text stay in step instead of the icon popping in a single frame
@@ -171,7 +166,7 @@ ColumnLayout {
                 font.pixelSize: Appearance.font.pixelSize.small
                 font.weight: Font.DemiBold
                 // As in the command block, the outcomes that cost the user something stand out
-                color: ["unanswered", "dismissed"].includes(root.state)
+                color: root.state === "dismissed"
                     ? Appearance.colors.colTertiary : Appearance.colors.colSubtext
                 text: root.stateLabel
             }
@@ -190,13 +185,15 @@ ColumnLayout {
         contentHeight: questionBody.implicitHeight + root.questionBlockComponentSpacing
         animation: root.collapseAnimation
         // While the input streams the body grows on its own; animating that reads as a stutter
-        animated: !root.streamingPreview
+        animated: !root.streaming
 
         Rectangle { // Questions, option pills, and the Submit/Dismiss pair
             id: questionBody
+            // Top-anchored: the hint changes this body's height while expanded, and a bottom
+            // anchor would push that growth out of the window, dragging the pills up with it
             anchors.left: parent.left
             anchors.right: parent.right
-            anchors.bottom: parent.bottom
+            anchors.top: parent.top
             topLeftRadius: Appearance.rounding.unsharpen
             topRightRadius: Appearance.rounding.unsharpen
             bottomLeftRadius: Appearance.rounding.small
@@ -257,7 +254,7 @@ ColumnLayout {
                                     // rigidly so the size change is animated exactly once
                                     enableImplicitWidthAnimation: false
                                     buttonRadius: optionPill.down ? Appearance.rounding.verysmall : Appearance.rounding.small
-                                    horizontalPadding: 8
+                                    horizontalPadding: root.pillTextInset
                                     verticalPadding: 6
                                     toggled: root.chosenLabels(questionSection.question).includes(label)
                                     colBackground: toggled ? Appearance.colors.colPrimary : Appearance.colors.colSecondaryContainer
@@ -285,7 +282,8 @@ ColumnLayout {
                                                 optionPill.toggled ? [] : [optionPill.label]);
                                         }
                                     }
-                                    StyledToolTip {
+                                    PillHint {
+                                        bounds: questionContentColumn
                                         text: optionPill.modelData.description ?? ""
                                     }
                                 }
@@ -295,12 +293,20 @@ ColumnLayout {
                                 id: freeTextPill
                                 // Renders selected exactly like an option pill: lit when its
                                 // text is among the question's current picks
+                                PillHint {
+                                    bounds: questionContentColumn
+                                    extraVisibleCondition: freeTextHover.hovered
+                                    text: freeTextPill.committed
+                                        ? Translation.tr("Your own answer")
+                                        : Translation.tr("Type your own answer")
+                                }
+                                HoverHandler { id: freeTextHover }
                                 property bool committed: freeTextInput.text.trim().length > 0
                                     && root.chosenLabels(questionSection.question).includes(freeTextInput.text.trim())
                                 // In the submitted transcript the pill stays, showing the custom answer
-                                property string historyFreeText: root.interactive || root.streamingPreview
+                                property string historyFreeText: root.interactive || root.streaming
                                     ? "" : root.freeTextOf(questionSection.question, questionSection.modelData.options ?? [])
-                                visible: root.interactive || root.streamingPreview || historyFreeText.length > 0
+                                visible: root.interactive || root.streaming || historyFreeText.length > 0
                                 radius: Appearance.rounding.small
                                 color: committed ? Appearance.colors.colPrimary : Appearance.colors.colSecondaryContainer
                                 border.width: freeTextInput.activeFocus && !committed ? 1 : 0
@@ -308,14 +314,14 @@ ColumnLayout {
                                 implicitHeight: freeTextInput.implicitHeight + 6 * 2
                                 // Empty keeps room for the placeholder; typed text sizes the pill exactly
                                 implicitWidth: freeTextInput.text.length > 0
-                                    ? freeTextInput.contentWidth + 8 * 2 + freeCheckSlot.width
+                                    ? freeTextInput.contentWidth + root.pillTextInset * 2 + freeCheckSlot.width
                                     : 120
 
                                 CheckSlot {
                                     id: freeCheckSlot
                                     checked: questionSection.multiSelect && freeTextPill.committed
                                     anchors.left: parent.left
-                                    anchors.leftMargin: 8
+                                    anchors.leftMargin: root.pillTextInset
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
 
@@ -326,8 +332,8 @@ ColumnLayout {
                                     // transcript it fills in the submitted custom answer
                                     text: freeTextPill.historyFreeText
                                     anchors.fill: parent
-                                    anchors.leftMargin: 8 + freeCheckSlot.width
-                                    anchors.rightMargin: 8
+                                    anchors.leftMargin: root.pillTextInset + freeCheckSlot.width
+                                    anchors.rightMargin: root.pillTextInset
                                     verticalAlignment: TextInput.AlignVCenter
                                     clip: true
                                     font.family: Appearance.font.family.main
@@ -410,7 +416,7 @@ ColumnLayout {
                 }
 
                 RowLayout { // Submit/Dismiss pair, mirrors command approval
-                    visible: root.interactive || root.streamingPreview
+                    visible: root.interactive || root.streaming
                     Layout.fillWidth: true
                     Layout.topMargin: 2
 
