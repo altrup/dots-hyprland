@@ -516,6 +516,12 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
             }
 
+            MouseArea { // Click anywhere in the input area to focus the text field
+                anchors.fill: parent
+                cursorShape: Qt.IBeamCursor
+                onPressed: messageInputField.forceActiveFocus()
+            }
+
             AttachedFileIndicator {
                 id: attachedFileIndicator
                 anchors {
@@ -541,13 +547,13 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 ScrollView {
                     id: inputScrollView
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Math.min(root.height * 3/5, messageInputField.height)
+                    Layout.preferredHeight: Math.min(root.height * 3/5, messageInputField.implicitHeight)
                     clip: true
                     ScrollBar.vertical.policy: ScrollBar.AsNeeded
 
                     StyledTextArea { // The actual TextArea (inside ScrollView to enable scrolling)
                         id: messageInputField
-                        anchors.fill: parent
+                        width: inputScrollView.availableWidth
                         wrapMode: TextArea.Wrap
                         padding: 10
                         color: activeFocus ? Appearance.m3colors.m3onSurface : Appearance.m3colors.m3onSurfaceVariant
