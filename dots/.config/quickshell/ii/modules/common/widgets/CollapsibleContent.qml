@@ -3,9 +3,9 @@ import QtQuick
 import QtQuick.Layouts
 
 /**
- * Clipping window for content that collapses to nothing. Anchor the content to this item's
- * bottom so it slides out of view rather than being squashed, which would re-wrap text, and
- * set contentHeight to the content's own height; measuring it here would fight that anchor.
+ * Clipping window for content that collapses to nothing. Anchor the content to an edge, not
+ * filling, and set contentHeight to its own height. Bottom anchor slides it away; top anchor
+ * suits content that also grows while expanded, which a bottom anchor pushes out of view.
  */
 Item {
     id: root

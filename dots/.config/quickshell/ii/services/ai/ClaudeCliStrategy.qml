@@ -293,6 +293,17 @@ ApiStrategy {
             inThinkingBlock = false;
             appendContent(message, "\n</think>\n\n");
         }
+        // An interrupt can also land mid-input, before the tool ever asked for approval, leaving a
+        // fence claiming to still be streaming for good. Stopping the turn refuses it; ending any
+        // other way means it never got to run
+        const leftover = interruptRequested ? "denied" : "failed";
+        Object.keys(pendingTools).forEach(id => {
+            const tool = pendingTools[id];
+            if (tool.state !== "streaming") return;
+            tool.state = leftover;
+            if (tool.open) rewriteFence(message, tool);
+            else setFenceState(message, tool);
+        });
         return {};
     }
 

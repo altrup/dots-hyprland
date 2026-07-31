@@ -634,6 +634,7 @@
   "done": "done",
   "failed": "failed",
   "answered": "answered",
-  "unanswered": "unanswered",
-  "rejected": "rejected"
+  "rejected": "rejected",
+  "Type your own answer": "Type your own answer",
+  "Your own answer": "Your own answer"
 }
