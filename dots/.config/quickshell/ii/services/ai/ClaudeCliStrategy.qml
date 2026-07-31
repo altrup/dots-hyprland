@@ -12,10 +12,9 @@ ApiStrategy {
     // The request captured by buildRequestData: {model, messages, systemPrompt, filePath, sessionId}
     property var pendingRequest: null
     property bool inThinkingBlock: false
-    // Command fences render at content_block_start and are rewritten in place while the
-    // input streams; the open fence is always the message tail, so a rewrite is just a
-    // slice at the recorded offsets. Entries stay registered after the block stops
-    // because the permission request refers back to them (and can even beat the stop)
+    // Command fences render at content_block_start and are rewritten in place by ordinal
+    // while the input streams. Entries stay registered after the block stops because the
+    // permission request refers back to them (and can even beat the stop)
     property string currentToolId: ""
     property var pendingTools: ({})
     property bool interruptRequested: false
@@ -120,42 +119,35 @@ ApiStrategy {
         const tool = {
             name: name,
             inputJson: "",
-            open: true,
             // Nothing exists to run or approve yet; the state settles once the input is in
             state: "streaming",
             // This fence is about to be appended, so the fences already there are its ordinal
             ordinal: CF.StringUtils.commandFences(message.content).length,
-            fenceStart: message.content.length,
-            rawFenceStart: message.rawContent.length,
         };
         pendingTools[id] = tool;
-        rewriteFence(message, tool);
+        appendContent(message, `\n\n${fenceText(tool)}\n\n`);
         return tool;
     }
 
-    // Valid only while the fence is the message tail: from registerTool until the
-    // block's stop event (tool.open), plus the stop event's own final rewrite
-    function rewriteFence(message, tool) {
-        const fence = `\n\n\`\`\`command:${tool.name}:${tool.state}\n${commandSummary(tool)}\n\`\`\`\n\n`;
-        message.content = message.content.slice(0, tool.fenceStart) + fence;
-        message.rawContent = message.rawContent.slice(0, tool.rawFenceStart) + fence;
+    function fenceText(tool) {
+        return `\`\`\`command:${tool.name}:${tool.state}\n${commandSummary(tool)}\n\`\`\``;
     }
 
-    // Results land after the block's stop event, by which point the fence is no longer
-    // the message tail, so the state token is swapped in place by ordinal instead
-    function setFenceState(message, tool) {
-        const swap = fence => CF.StringUtils.withCommandFenceState(fence, tool.state);
-        message.content = CF.StringUtils.editCommandFence(message.content, tool.ordinal, swap);
-        message.rawContent = CF.StringUtils.editCommandFence(message.rawContent, tool.ordinal, swap);
+    // By ordinal rather than by offset: a fence settling earlier in the message shifts
+    // every later one, and several tool calls can be in flight at once
+    function rewriteFence(message, tool) {
+        const render = () => fenceText(tool);
+        message.content = CF.StringUtils.editCommandFence(message.content, tool.ordinal, render);
+        message.rawContent = CF.StringUtils.editCommandFence(message.rawContent, tool.ordinal, render);
     }
 
     // Tools that take a command show it as the fence body; the rest show their whole input,
-    // so the body stays valid JSON for delegates that parse it back
+    // so the body stays valid JSON for delegates that parse it back. Never empty: a blank
+    // body makes the fence invisible to commandFences and shifts every later ordinal
     function commandSummary(tool) {
         const input = tool.input ?? CF.StringUtils.parsePartialJson(tool.inputJson);
-        if (!input) return tool.lastSummary ?? "{}";
-        tool.lastSummary = input.command ?? JSON.stringify(input);
-        return tool.lastSummary;
+        if (input) tool.lastSummary = input.command ?? JSON.stringify(input);
+        return (tool.lastSummary?.length > 0) ? tool.lastSummary : "{}";
     }
 
     function parseResponseLine(line, message) {
@@ -203,7 +195,6 @@ ApiStrategy {
                                 try { tool.input = JSON.parse(tool.inputJson); } catch (e) {}
                             }
                             rewriteFence(message, tool);
-                            tool.open = false;
                         }
                         currentToolId = "";
                     }
@@ -225,7 +216,7 @@ ApiStrategy {
                         if (!tool || ["denied", "answered"].includes(tool.state)
                             || tool.name === "AskUserQuestion") continue;
                         tool.state = block.is_error ? "failed" : "done";
-                        setFenceState(message, tool);
+                        rewriteFence(message, tool);
                     }
                 }
                 return {};
@@ -239,13 +230,9 @@ ApiStrategy {
                     // Nothing runs until the user decides; tools that need no approval never
                     // reach here and go straight from streaming to their result
                     tool.state = "pending";
-                    if (tool.open) {
-                        // The request can beat the block's stop event; its input is authoritative
-                        tool.input = request.input ?? {};
-                        rewriteFence(message, tool);
-                    } else {
-                        setFenceState(message, tool);
-                    }
+                    // The request can beat the block's stop event; its input is authoritative
+                    tool.input = request.input ?? {};
+                    rewriteFence(message, tool);
                     message.pendingCommandIndex = tool.ordinal;
                     message.functionName = request.tool_name ?? "";
                     message.functionPending = true;
@@ -301,8 +288,7 @@ ApiStrategy {
             const tool = pendingTools[id];
             if (tool.state !== "streaming") return;
             tool.state = leftover;
-            if (tool.open) rewriteFence(message, tool);
-            else setFenceState(message, tool);
+            rewriteFence(message, tool);
         });
         return {};
     }
