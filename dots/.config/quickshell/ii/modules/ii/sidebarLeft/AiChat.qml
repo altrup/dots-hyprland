@@ -516,12 +516,6 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                 animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
             }
 
-            MouseArea { // Click anywhere in the input area to focus the text field
-                anchors.fill: parent
-                cursorShape: Qt.IBeamCursor
-                onPressed: messageInputField.forceActiveFocus()
-            }
-
             AttachedFileIndicator {
                 id: attachedFileIndicator
                 anchors {
