@@ -199,28 +199,8 @@ Rectangle {
                         }
                     }
 
-                    AiMessageControlButton {
-                        id: copyButton
-                        buttonIcon: activated ? "inventory" : "content_copy"
-
-                        onClicked: {
-                            Quickshell.clipboardText = root.messageData?.content
-                            copyButton.activated = true
-                            copyIconTimer.restart()
-                        }
-
-                        Timer {
-                            id: copyIconTimer
-                            interval: 1500
-                            repeat: false
-                            onTriggered: {
-                                copyButton.activated = false
-                            }
-                        }
-                        
-                        StyledToolTip {
-                            text: Translation.tr("Copy")
-                        }
+                    AiMessageCopyButton {
+                        copyText: root.messageData?.content ?? ""
                     }
                     AiMessageControlButton {
                         id: editButton
