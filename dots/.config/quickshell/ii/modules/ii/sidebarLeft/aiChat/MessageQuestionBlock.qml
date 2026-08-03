@@ -300,7 +300,29 @@ ColumnLayout {
                                         ? Translation.tr("Your own answer")
                                         : Translation.tr("Type your own answer")
                                 }
-                                HoverHandler { id: freeTextHover }
+                                HoverHandler {
+                                    id: freeTextHover
+                                    cursorShape: root.interactive ? Qt.IBeamCursor : Qt.ArrowCursor
+                                }
+                                // The input is inset, so a click on the pill's padding or
+                                // checkmark would fall through and blur it instead of focusing
+                                TapHandler {
+                                    enabled: root.interactive
+                                    onTapped: freeTextInput.forceActiveFocus()
+                                }
+                                StateOverlay { // Hover feedback, as the option pills get
+                                    anchors.fill: parent
+                                    topLeftRadius: freeTextPill.radius
+                                    topRightRadius: freeTextPill.radius
+                                    bottomLeftRadius: freeTextPill.radius
+                                    bottomRightRadius: freeTextPill.radius
+                                    hover: root.interactive && freeTextHover.hovered
+                                    // Focus is already called out by the pill's own border, which
+                                    // is how M3 marks a focused text field
+                                    contentColor: freeTextPill.committed
+                                        ? Appearance.colors.colOnPrimary
+                                        : Appearance.colors.colOnSecondaryContainer
+                                }
                                 property bool committed: freeTextInput.text.trim().length > 0
                                     && root.chosenLabels(questionSection.question).includes(freeTextInput.text.trim())
                                 // In the submitted transcript the pill stays, showing the custom answer
