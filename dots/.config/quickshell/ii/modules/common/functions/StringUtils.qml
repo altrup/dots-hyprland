@@ -104,6 +104,22 @@ Singleton {
     }
 
     /**
+     * Character offset each line of the text starts at. Lets a caller ask a laid-out text item
+     * where a given line ended up, without splitting the text a second way.
+     * @param { string } text
+     * @returns { list<int> }
+     */
+    function lineStartOffsets(text) {
+        const lines = String(text ?? "").replace(/\n$/, "").split("\n");
+        let offset = 0;
+        return lines.map(line => {
+            const start = offset;
+            offset += line.length + 1;
+            return start;
+        });
+    }
+
+    /**
      * Swaps a command fence's state token, keeping whatever tool name it already carries
      * so states replace each other instead of stacking.
      * @param { string } fence
