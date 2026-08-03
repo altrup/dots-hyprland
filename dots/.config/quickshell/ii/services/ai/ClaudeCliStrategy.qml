@@ -22,6 +22,8 @@ ApiStrategy {
     // The permission request can trail the block's stop, so each tool waits out its own delay
     // before taking the label; one that settles inside the delay never shows it at all
     property int promotionDelay: 150
+    // Kept small: the whole log is laid out at once when expanded, and it is saved with the chat
+    property int maxOutputLines: 200
     property var promotionQueue: []
     property var promotionMessage: null
     property Timer promotionTimer: Timer {
@@ -34,6 +36,7 @@ ApiStrategy {
                 const tool = pendingTools[entry.id];
                 if (tool && tool.state === "streaming") {
                     tool.state = "running";
+                    tool.startedAt = now;
                     rewriteFence(promotionMessage, tool);
                 }
                 return false;
@@ -90,7 +93,10 @@ ApiStrategy {
         // A denial still comes back as an error tool_result; recording the decision here
         // stops that result from relabelling the fence as failed
         const tool = pendingTools[permissionRequest.toolUseId];
-        if (tool) tool.state = allow ? "running" : "denied";
+        if (tool) {
+            tool.state = allow ? "running" : "denied";
+            if (allow) tool.startedAt = Date.now();
+        }
         return JSON.stringify({
             type: "control_response",
             response: {
@@ -153,7 +159,46 @@ ApiStrategy {
     }
 
     function fenceText(tool) {
-        return `\`\`\`command:${tool.name}:${tool.state}\n${commandSummary(tool)}\n\`\`\``;
+        return `\`\`\`command:${tool.name}:${tool.state}${timingToken(tool)}\n${commandSummary(tool)}${outputSection(tool)}\n\`\`\``;
+    }
+
+    // When it started while it runs, how long it took once it is over. Carried in the info
+    // string because the delegate is rebuilt on every rewrite, so a clock it started itself
+    // would restart with it. Neither token is a state or the tool name, so the fence still
+    // parses as before
+    function timingToken(tool) {
+        if (tool.elapsedSeconds !== undefined) return `:d${tool.elapsedSeconds}`;
+        if (tool.startedAt !== undefined) return `:t${tool.startedAt}`;
+        return "";
+    }
+
+    // Backtick runs in output would close the fence early and shift every later ordinal, so
+    // they get an invisible break; a separator of its own would do the same to the split
+    function outputSection(tool) {
+        if (!(tool.output?.length > 0)) return "";
+        const safe = tool.output
+            .replace(new RegExp(CF.StringUtils.commandOutputSeparator, "g"), "")
+            .replace(/```/g, "``\u200b`");
+        return `\n${CF.StringUtils.commandOutputSeparator}\n${safe}`;
+    }
+
+    function captureTiming(tool) {
+        if (tool.startedAt === undefined) return;
+        tool.elapsedSeconds = Math.floor((Date.now() - tool.startedAt) / 1000);
+    }
+
+    function captureOutput(tool, block) {
+        if (tool.name !== "Bash" && !block.is_error) return;
+        const content = block.content;
+        const text = Array.isArray(content)
+            ? content.filter(part => part.type === "text").map(part => part.text).join("\n")
+            : (content ?? "");
+        // Kept as the command printed it, blank lines and all; only the length is bounded,
+        // and whatever went wrong is at the end, so the head is what a long log loses
+        const lines = String(text).split("\n");
+        const kept = lines.slice(-maxOutputLines);
+        if (kept.length < lines.length) kept.unshift("…");
+        tool.output = kept.join("\n");
     }
 
     // By ordinal rather than by offset: a fence settling earlier in the message shifts
@@ -246,6 +291,8 @@ ApiStrategy {
                         if (!tool || ["denied", "answered"].includes(tool.state)
                             || tool.name === "AskUserQuestion") continue;
                         tool.state = block.is_error ? "failed" : "done";
+                        captureTiming(tool);
+                        captureOutput(tool, block);
                         rewriteFence(message, tool);
                     }
                 }
@@ -319,6 +366,7 @@ ApiStrategy {
             const tool = pendingTools[id];
             if (!["streaming", "running"].includes(tool.state)) return;
             tool.state = tool.state === "running" ? "failed" : leftover;
+            captureTiming(tool);
             rewriteFence(message, tool);
         });
         return {};

@@ -85,6 +85,25 @@ Singleton {
     readonly property var commandFenceStates: ["streaming", "pending", "running", "done", "failed", "denied", "answered"]
 
     /**
+     * Divides a command fence's body into the command and the output of the run. Output lives
+     * in the fence rather than beside it so it survives saving and reloading the chat, which
+     * keeps nothing but the message text.
+     */
+    readonly property string commandOutputSeparator: "\u001e"
+
+    /**
+     * @param { string } body
+     * @returns { {command: string, output: string} }
+     */
+    function splitCommandFenceBody(body) {
+        const parts = String(body ?? "").split(root.commandOutputSeparator);
+        return {
+            command: parts[0].replace(/\n$/, ""),
+            output: parts.slice(1).join("").replace(/^\n/, "").replace(/\s+$/, "")
+        };
+    }
+
+    /**
      * Swaps a command fence's state token, keeping whatever tool name it already carries
      * so states replace each other instead of stacking.
      * @param { string } fence
