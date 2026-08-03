@@ -283,6 +283,32 @@ Singleton {
     }
 
     /**
+     * Duration as the units that carry information, largest first: 2d, 3h / 4h, 50m / 1m, 30s.
+     * Seconds are dropped once the total runs to hours, where they say nothing; pass
+     * includeSeconds false for a duration that is only ever read in minutes, like an uptime.
+     * @param { number } seconds
+     * @param { boolean } [includeSeconds]
+     * @returns { string }
+     */
+    function friendlyDurationForSeconds(seconds, includeSeconds = true) {
+        if (isNaN(seconds) || seconds < 0)
+            return includeSeconds ? "0s" : "0m";
+        seconds = Math.floor(seconds);
+        const parts = [];
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.floor((seconds % 86400) / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        if (days > 0) parts.push(`${days}d`);
+        if (hours > 0) parts.push(`${hours}h`);
+        if (minutes > 0) parts.push(`${minutes}m`);
+        if (includeSeconds && days === 0 && hours === 0 && seconds % 60 > 0) {
+            parts.push(`${seconds % 60}s`);
+        }
+        if (parts.length === 0) parts.push(includeSeconds ? `${seconds}s` : "0m");
+        return parts.join(", ");
+    }
+
+    /**
      * Escapes HTML special characters in a string.
      * @param { string } str
      * @returns { string }
