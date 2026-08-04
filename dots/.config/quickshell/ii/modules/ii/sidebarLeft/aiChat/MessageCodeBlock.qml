@@ -116,8 +116,7 @@ ColumnLayout {
     readonly property int hiddenOutputLines: outputClipped
         ? outputLineCount - outputLineStarts.filter(s => outputRowOf(s) < outputPeekRows).length
         : 0
-    // A peek answers "did it work" without a click; a failure is the case where it never does
-    property bool outputExpanded: root.state === "failed"
+    property bool outputExpanded: false
 
     property real codeBlockBackgroundRounding: Appearance.rounding.small
     property real codeBlockHeaderPadding: 3
@@ -461,9 +460,6 @@ ColumnLayout {
 
                 CollapsibleContent {
                     id: outputCollapsibleContent
-                    // A failure arrives expanded mid-generation, wrap still settling; only the
-                    // toggle is worth animating
-                    animated: root.messageData?.done ?? true
                     collapsed: !root.outputExpanded
                     contentHeight: outputTextEdit.implicitHeight
                     collapsedHeight: Math.min(contentHeight, root.outputPeekHeight)
