@@ -242,8 +242,10 @@ ColumnLayout {
                             spacing: 5
 
                             // The box's own height animates as the flow reflows, so pills that
-                            // change row travel with it instead of teleporting
+                            // change row travel with it instead of teleporting. Off while the
+                            // options are still arriving, where every new pill reflows the rest
                             move: Transition {
+                                enabled: !root.streaming
                                 NumberAnimation {
                                     properties: "x,y"
                                     duration: Appearance.animation.elementMoveFast.duration
@@ -346,12 +348,10 @@ ColumnLayout {
                                 border.width: freeTextInput.activeFocus && !committed ? 1 : 0
                                 border.color: Appearance.colors.colPrimary
                                 implicitHeight: freeTextInput.implicitHeight + 6 * 2
-                                // Empty keeps room for the placeholder; typed text sizes the pill
-                                // exactly, up to the row width, past which the text wraps instead.
-                                // Width comes off unwrapped metrics rather than the input's own
-                                // content size, which would depend right back on this width
+                                // Off unwrapped metrics: the input's own content size would depend
+                                // right back on this width. The spare pixel is its cursor column
                                 implicitWidth: freeTextInput.text.length > 0
-                                    ? Math.min(Math.ceil(freeTextMetrics.advanceWidth) + root.pillTextInset * 2 + freeCheckSlot.width,
+                                    ? Math.min(Math.ceil(freeTextMetrics.advanceWidth) + 1 + root.pillTextInset * 2 + freeCheckSlot.width,
                                         optionsFlow.width)
                                     : 120
 
