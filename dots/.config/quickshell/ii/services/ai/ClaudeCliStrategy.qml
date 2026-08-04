@@ -92,10 +92,16 @@ ApiStrategy {
     function buildPermissionResponse(permissionRequest, allow, updatedInput): string {
         // A denial still comes back as an error tool_result; recording the decision here
         // stops that result from relabelling the fence as failed
+        // A question is spent once answered, never run: leaving it "running" would have the
+        // turn's own cleanup rewrite the fence the service just filled with the answers
         const tool = pendingTools[permissionRequest.toolUseId];
         if (tool) {
-            tool.state = allow ? "running" : "denied";
-            if (allow) tool.startedAt = Date.now();
+            if (!allow) tool.state = "denied";
+            else if (tool.name === "AskUserQuestion") tool.state = "answered";
+            else {
+                tool.state = "running";
+                tool.startedAt = Date.now();
+            }
         }
         return JSON.stringify({
             type: "control_response",
