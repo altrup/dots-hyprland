@@ -18,17 +18,20 @@ end
 -- NOTE: hl.get_monitors() only lists active monitors, so a disabled one can't
 -- be looked up by name on re-enable - remember it instead. Re-enabling also
 -- requires disabled = false explicitly; omitting the field doesn't clear it
+-- Reports success when an external output exists, even if the internal panel is
+-- already disabled - counting active monitors instead would read the second call
+-- as "internal is the only display" and suspend
 function M.disable_internal_if_external_present()
-    local monitors = hl.get_monitors()
-    if #monitors < 2 then return false end
-    for _, m in ipairs(monitors) do
-        if m.name:match("^eDP%-") then
-            last_lid_monitor = m.name
-            hl.monitor({ output = m.name, disabled = true })
-            return true
-        end
+    local internal, has_external
+    for _, m in ipairs(hl.get_monitors()) do
+        if m.name:match("^eDP%-") then internal = m.name else has_external = true end
     end
-    return false
+    if not has_external then return false end
+    if internal then
+        last_lid_monitor = internal
+        hl.monitor({ output = internal, disabled = true })
+    end
+    return true
 end
 
 function M.get_last_lid_monitor()
