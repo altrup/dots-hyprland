@@ -85,6 +85,41 @@ Singleton {
     readonly property var commandFenceStates: ["streaming", "pending", "running", "done", "failed", "denied", "answered"]
 
     /**
+     * Divides a command fence's body into the command and the output of the run. Output lives
+     * in the fence rather than beside it so it survives saving and reloading the chat, which
+     * keeps nothing but the message text.
+     */
+    readonly property string commandOutputSeparator: "\u001e"
+
+    /**
+     * @param { string } body
+     * @returns { {command: string, output: string} }
+     */
+    function splitCommandFenceBody(body) {
+        const parts = String(body ?? "").split(root.commandOutputSeparator);
+        return {
+            command: parts[0].replace(/\n$/, ""),
+            output: parts.slice(1).join("").replace(/^\n/, "").replace(/\s+$/, "")
+        };
+    }
+
+    /**
+     * Character offset each line of the text starts at. Lets a caller ask a laid-out text item
+     * where a given line ended up, without splitting the text a second way.
+     * @param { string } text
+     * @returns { list<int> }
+     */
+    function lineStartOffsets(text) {
+        const lines = String(text ?? "").replace(/\n$/, "").split("\n");
+        let offset = 0;
+        return lines.map(line => {
+            const start = offset;
+            offset += line.length + 1;
+            return start;
+        });
+    }
+
+    /**
      * Swaps a command fence's state token, keeping whatever tool name it already carries
      * so states replace each other instead of stacking.
      * @param { string } fence
@@ -280,6 +315,32 @@ Singleton {
         } else {
             return `${m}:${s.toString().padStart(2, '0')}`;
         }
+    }
+
+    /**
+     * Duration as the units that carry information, largest first: 2d, 3h / 4h, 50m / 1m, 30s.
+     * Seconds are dropped once the total runs to hours, where they say nothing; pass
+     * includeSeconds false for a duration that is only ever read in minutes, like an uptime.
+     * @param { number } seconds
+     * @param { boolean } [includeSeconds]
+     * @returns { string }
+     */
+    function friendlyDurationForSeconds(seconds, includeSeconds = true) {
+        if (isNaN(seconds) || seconds < 0)
+            return includeSeconds ? "0s" : "0m";
+        seconds = Math.floor(seconds);
+        const parts = [];
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.floor((seconds % 86400) / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        if (days > 0) parts.push(`${days}d`);
+        if (hours > 0) parts.push(`${hours}h`);
+        if (minutes > 0) parts.push(`${minutes}m`);
+        if (includeSeconds && days === 0 && hours === 0 && seconds % 60 > 0) {
+            parts.push(`${seconds % 60}s`);
+        }
+        if (parts.length === 0) parts.push(includeSeconds ? `${seconds}s` : "0m");
+        return parts.join(", ");
     }
 
     /**

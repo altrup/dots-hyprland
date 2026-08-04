@@ -237,8 +237,22 @@ ColumnLayout {
                         }
 
                         Flow {
+                            id: optionsFlow
                             Layout.fillWidth: true
                             spacing: 5
+
+                            // The box's own height animates as the flow reflows, so pills that
+                            // change row travel with it instead of teleporting. Off while the
+                            // options are still arriving, where every new pill reflows the rest
+                            move: Transition {
+                                enabled: !root.streaming
+                                NumberAnimation {
+                                    properties: "x,y"
+                                    duration: Appearance.animation.elementMoveFast.duration
+                                    easing.type: Appearance.animation.elementMoveFast.type
+                                    easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+                                }
+                            }
 
                             Repeater {
                                 model: ScriptModel {
@@ -300,7 +314,29 @@ ColumnLayout {
                                         ? Translation.tr("Your own answer")
                                         : Translation.tr("Type your own answer")
                                 }
-                                HoverHandler { id: freeTextHover }
+                                HoverHandler {
+                                    id: freeTextHover
+                                    cursorShape: root.interactive ? Qt.IBeamCursor : Qt.ArrowCursor
+                                }
+                                // The input is inset, so a click on the pill's padding or
+                                // checkmark would fall through and blur it instead of focusing
+                                TapHandler {
+                                    enabled: root.interactive
+                                    onTapped: freeTextInput.forceActiveFocus()
+                                }
+                                StateOverlay { // Hover feedback, as the option pills get
+                                    anchors.fill: parent
+                                    topLeftRadius: freeTextPill.radius
+                                    topRightRadius: freeTextPill.radius
+                                    bottomLeftRadius: freeTextPill.radius
+                                    bottomRightRadius: freeTextPill.radius
+                                    hover: root.interactive && freeTextHover.hovered
+                                    // Focus is already called out by the pill's own border, which
+                                    // is how M3 marks a focused text field
+                                    contentColor: freeTextPill.committed
+                                        ? Appearance.colors.colOnPrimary
+                                        : Appearance.colors.colOnSecondaryContainer
+                                }
                                 property bool committed: freeTextInput.text.trim().length > 0
                                     && root.chosenLabels(questionSection.question).includes(freeTextInput.text.trim())
                                 // In the submitted transcript the pill stays, showing the custom answer
@@ -312,10 +348,18 @@ ColumnLayout {
                                 border.width: freeTextInput.activeFocus && !committed ? 1 : 0
                                 border.color: Appearance.colors.colPrimary
                                 implicitHeight: freeTextInput.implicitHeight + 6 * 2
-                                // Empty keeps room for the placeholder; typed text sizes the pill exactly
+                                // Off unwrapped metrics: the input's own content size would depend
+                                // right back on this width. The spare pixel is its cursor column
                                 implicitWidth: freeTextInput.text.length > 0
-                                    ? freeTextInput.contentWidth + root.pillTextInset * 2 + freeCheckSlot.width
+                                    ? Math.min(Math.ceil(freeTextMetrics.advanceWidth) + 1 + root.pillTextInset * 2 + freeCheckSlot.width,
+                                        optionsFlow.width)
                                     : 120
+
+                                TextMetrics {
+                                    id: freeTextMetrics
+                                    font: freeTextInput.font
+                                    text: freeTextInput.text
+                                }
 
                                 CheckSlot {
                                     id: freeCheckSlot
@@ -325,16 +369,18 @@ ColumnLayout {
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
 
-                                TextInput {
+                                TextEdit {
                                     id: freeTextInput
                                     enabled: root.interactive
                                     // Interactive typing replaces this binding; for a loaded
                                     // transcript it fills in the submitted custom answer
                                     text: freeTextPill.historyFreeText
-                                    anchors.fill: parent
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.verticalCenter: parent.verticalCenter
                                     anchors.leftMargin: root.pillTextInset + freeCheckSlot.width
                                     anchors.rightMargin: root.pillTextInset
-                                    verticalAlignment: TextInput.AlignVCenter
+                                    wrapMode: TextEdit.Wrap
                                     clip: true
                                     font.family: Appearance.font.family.main
                                     font.pixelSize: Appearance.font.pixelSize.small
@@ -406,8 +452,15 @@ ColumnLayout {
                                         }
                                     }
 
-                                    // Blur commits, so Enter just drops focus
-                                    onAccepted: root.forceActiveFocus()
+                                    // Blur commits, so Enter just drops focus. Shift+Enter is left
+                                    // to the editor for a deliberate newline
+                                    Keys.onPressed: event => {
+                                        if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+                                                && !(event.modifiers & Qt.ShiftModifier)) {
+                                            root.forceActiveFocus();
+                                            event.accepted = true;
+                                        }
+                                    }
                                 }
                             }
 
