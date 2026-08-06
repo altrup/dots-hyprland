@@ -161,14 +161,14 @@ hl.plugin.hyprgrass.gesture {
     pattern = {kind = "edge", origin = "right", direction = "horizontal"},
     action = "workspace",
 }
-hl.plugin.hyprgrass.bind {
-    pattern = {kind = "edge", origin = "left", direction = "right"},
-    action = hl.dsp.focus({ workspace = "r-1" }),
-}
-hl.plugin.hyprgrass.bind {
-    pattern = {kind = "edge", origin = "right", direction = "left"},
-    action = hl.dsp.focus({ workspace = "r+1" }),
-}
+-- hl.plugin.hyprgrass.bind {
+--     pattern = {kind = "edge", origin = "left", direction = "right"},
+--     action = hl.dsp.focus({ workspace = "r-1" }),
+-- }
+-- hl.plugin.hyprgrass.bind {
+--     pattern = {kind = "edge", origin = "right", direction = "left"},
+--     action = hl.dsp.focus({ workspace = "r+1" }),
+-- }
 
 -- swipe down from top edge: toggle search
 hl.plugin.hyprgrass.bind {
