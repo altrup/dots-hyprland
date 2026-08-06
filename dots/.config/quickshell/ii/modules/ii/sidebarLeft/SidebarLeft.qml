@@ -88,8 +88,7 @@ Scope { // Scope
             id: panelWindow
             visible: GlobalStates.sidebarLeftOpen
             
-            property bool extend: false
-            property real sidebarWidth: panelWindow.extend ? Appearance.sizes.sidebarWidthExtended : Appearance.sizes.sidebarWidth
+            property real sidebarWidth: GlobalStates.sidebarLeftExtended ? Appearance.sizes.sidebarWidthExtended : Appearance.sizes.sidebarWidth
             property var contentParent: sidebarLeftBackground
 
             function hide() {
@@ -157,7 +156,7 @@ Scope { // Scope
                     }
                     if (event.modifiers === Qt.ControlModifier) {
                         if (event.key === Qt.Key_O) {
-                            panelWindow.extend = !panelWindow.extend;
+                            GlobalStates.sidebarLeftExtended = !GlobalStates.sidebarLeftExtended;
                         } else if (event.key === Qt.Key_D) {
                             root.toggleDetach();
                         } else if (event.key === Qt.Key_P) {

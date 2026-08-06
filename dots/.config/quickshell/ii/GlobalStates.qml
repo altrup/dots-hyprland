@@ -16,6 +16,7 @@ Singleton {
     property bool barOpen: true
     property bool crosshairOpen: false
     property bool sidebarLeftOpen: false
+    property bool sidebarLeftExtended: false
     property bool sidebarRightOpen: false
     property bool mediaControlsOpen: false
     property bool osdBrightnessOpen: false

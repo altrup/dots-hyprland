@@ -31,7 +31,7 @@ Scope {
             property var currentWorkspaceID: hyprlandDataMonitor?.specialWorkspace.id || hyprlandDataMonitor?.activeWorkspace.id
             property var biggestWindow: HyprlandData.biggestWindowForWorkspace(currentWorkspaceID)
             property var window: HyprlandData.activeWindow?.workspace?.id === currentWorkspaceID ? HyprlandData.activeWindow : biggestWindow
-            property bool windowOrPanelOpen: GlobalStates.oskOpen || window
+            property bool windowOrPanelOpen: GlobalStates.oskOpen || window || (GlobalStates.sidebarLeftOpen && GlobalStates.sidebarLeftExtended)
             property bool completelyHidden: Config.options?.dock.hideWhenFullscreen && window?.fullscreen === 2 && !bar?.mustShow
             property bool reveal: root.pinned || (Config.options?.dock.hoverToReveal && dockMouseArea.containsMouse) || dockApps.requestDockShow || !windowOrPanelOpen
 
