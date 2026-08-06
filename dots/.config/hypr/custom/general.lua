@@ -20,6 +20,61 @@ hl.gesture({
 hl.gesture({ fingers = 4, direction = "up", action = "unset" })
 hl.gesture({ fingers = 4, direction = "down", action = "unset" })
 
+local qsIpc = "qs -c $qsConfig ipc call"
+
+-- 3-finger swipes drive shell panels instead of moving the window
+hl.gesture({ fingers = 3, direction = "swipe", action = "unset" })
+
+-- The shell exposes no way to read sidebar state, but each sidebar is a layer
+-- surface that exists only while open, so ask Hyprland instead. Native query,
+-- unlike io.popen, is safe to call from inside a callback.
+local function is_layer_open(namespace)
+    for _, layer in ipairs(hl.get_layers()) do
+        if layer.namespace == namespace then
+            return true
+        end
+    end
+    return false
+end
+
+-- Horizontal swipes walk one notch along [right sidebar] <- none -> [left sidebar]
+hl.gesture({
+    fingers = 3,
+    direction = "right",
+    action = function()
+        if is_layer_open("quickshell:sidebarRight") then
+            hl.dispatch(hl.dsp.exec_cmd(qsIpc .. " sidebarRight close"))
+        elseif not is_layer_open("quickshell:sidebarLeft") then
+            hl.dispatch(hl.dsp.exec_cmd(qsIpc .. " sidebarLeft open"))
+        end
+    end
+})
+hl.gesture({
+    fingers = 3,
+    direction = "left",
+    action = function()
+        if is_layer_open("quickshell:sidebarLeft") then
+            hl.dispatch(hl.dsp.exec_cmd(qsIpc .. " sidebarLeft close"))
+        elseif not is_layer_open("quickshell:sidebarRight") then
+            hl.dispatch(hl.dsp.exec_cmd(qsIpc .. " sidebarRight open"))
+        end
+    end
+})
+hl.gesture({
+    fingers = 3,
+    direction = "up",
+    action = function()
+        hl.dispatch(hl.dsp.exec_cmd(qsIpc .. " search toggle"))
+    end
+})
+hl.gesture({
+    fingers = 3,
+    direction = "down",
+    action = function()
+        hl.dispatch(hl.dsp.exec_cmd(qsIpc .. " search toggle"))
+    end
+})
+
 for i = 1, 2 do
     local mousenames = { "logitech-g305", "input-remapper-logitech-g305-forwarded" }
     for j = 1, 4 do
