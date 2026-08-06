@@ -30,9 +30,7 @@ hl.on("config.reloaded", function()
 end)
 
 hl.bind("switch:off:Lid Switch", function()
-    local last_lid_monitor = lidstate.get_last_lid_monitor()
-    if last_lid_monitor then
-        hl.monitor({ output = last_lid_monitor, disabled = false, mode = "preferred", position = "auto", scale = 1 })
-    end
-    lidstate.load_monitors()
+    -- Pass lid state from the event itself - the ACPI file can still read
+    -- "closed" while resuming from a wake triggered by this very lid open
+    lidstate.load_monitors(false)
 end, { locked = true })

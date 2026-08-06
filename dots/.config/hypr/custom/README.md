@@ -13,20 +13,21 @@ falls back to `systemctl suspend`. Requires `HandleLidSwitch=ignore` in
 `/etc/systemd/logind.conf.d/lid.conf`, otherwise systemd suspends before the
 `switch:on:Lid Switch` handler runs.
 
-`lidstate.lua` holds the shared state (`is_lid_closed`,
-`disable_internal_if_external_present`, `get_last_lid_monitor`) because two
-independent files need it:
-
 - `keybinds.lua` — reacts to the physical lid switch and to `config.reloaded`.
-- `~/.config/hypr/monitors.lua` (machine-specific, not tracked in this repo)
-  — must call `require("custom.lidstate").is_lid_closed()` before enabling
-  the internal panel's `hl.monitor({...})` rule, and skip it (or pass
-  `disabled = true`) when the lid is closed.
+- `lidstate.lua` — `is_lid_closed`, `disable_internal_if_external_present`,
+  and `load_monitors`, which applies `~/.config/hypr/monitors.lua`
+  (machine-specific, not tracked in this repo) with the internal-panel rules
+  rewritten to match the lid state: forced off while closed, forced on while
+  open. Rewriting on open matters because a rule that omits `disabled` doesn't
+  clear a previous `disabled = true`, which would leave the panel dark after
+  it was turned off by a lid close. Without a `monitors.lua`, the eDP
+  connector name comes from `/sys/class/drm` instead. The design is stateless:
+  lid open recovers from any prior state, including a stale ACPI lid reading
+  while resuming from a wake triggered by the lid open itself (the switch
+  binds pass the lid state from the event rather than polling ACPI).
 
-**Why `monitors.lua` needs the check too:** `hyprctl reload` re-sources
-`monitors.lua` unconditionally. If `monitors.lua` doesn't guard the internal
-panel itself, reloading while the lid is closed re-enables it, then
-`keybinds.lua`'s `config.reloaded` handler disables it again a moment later —
-visible as the panel flashing on and off, and workspaces migrating onto and
-back off the panel each time. The `config.reloaded` handler in `keybinds.lua`
-is a safety net for configs that skip the guard, not the primary fix.
+`monitors.lua` itself needs no lid guard — `load_monitors` claims the
+`monitors` module slot, so its rules only ever land through the rewrite, on
+startup and on `hyprctl reload` alike. The `config.reloaded` handler in
+`keybinds.lua` is a safety net for anything that enables the panel outside
+the config load path, such as a `hyprctl keyword`.
