@@ -39,8 +39,17 @@ hl.bind("SUPER + F1", function()
     hl.exec_cmd("ddcutil setvcp 60 " .. target)
 end)
 
--- Hyprgrass (everything below only applies if installed via hyprpm)
-if not is_file_exists(HOME .. "/.local/share/hyprpm/hyprgrass") then
+-- Hyprgrass (everything below only applies if the plugin is loaded)
+local function is_plugin_loaded(name)
+    for _, plugin in ipairs(hl.get_loaded_plugins()) do
+        if plugin.name == name then
+            return true
+        end
+    end
+    return false
+end
+
+if not is_plugin_loaded("hyprgrass") then
     return
 end
 
