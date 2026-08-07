@@ -165,6 +165,16 @@ ColumnLayout {
             textFormat: renderMarkdown ? TextEdit.MarkdownText : TextEdit.PlainText
             text: modelData
 
+            Connections {
+                // Switching format converts the document Qt already holds instead of reparsing
+                // the source, so the plain text view would show a lossy round-trip of the render.
+                // Must stay below textFormat: the reassignment only lands once the format flipped
+                target: root
+                function onRenderMarkdownChanged() {
+                    textArea.text = Qt.binding(() => textArea.modelData)
+                }
+            }
+
             onTextChanged: {
                 if (!root.editing) return
                 segmentContent = text
