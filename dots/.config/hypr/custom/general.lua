@@ -85,15 +85,6 @@ for i = 1, 2 do
     end
 end
 
--- My monitor
-hl.bind("SUPER + F1", function()
-    local p = io.popen("ddcutil getvcp 60 --brief")
-    local out = p:read("*a")
-    p:close()
-    local target = out:match("x0f%s*$") and "0x11" or "0x0f"
-    hl.exec_cmd("ddcutil setvcp 60 " .. target)
-end)
-
 -- Hyprgrass (everything below only applies if the plugin is loaded)
 local function is_plugin_loaded(name)
     for _, plugin in ipairs(hl.get_loaded_plugins()) do

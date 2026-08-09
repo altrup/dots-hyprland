@@ -4,6 +4,15 @@ hl.bind("XF86PowerOff", hl.dsp.global("quickshell:sessionToggle"), { locked = tr
 hl.unbind("SUPER + O")
 hl.bind("SUPER + O", hl.dsp.global("quickshell:overlayToggle"), { description = "Shell: Toggle overlay" })
 
+-- Toggle external monitor input source between DisplayPort and HDMI
+hl.bind("SUPER + F1", function()
+    local p = io.popen("ddcutil getvcp 60 --brief")
+    local out = p:read("*a")
+    p:close()
+    local target = out:match("x0f%s*$") and "0x11" or "0x0f"
+    hl.exec_cmd("ddcutil setvcp 60 " .. target)
+end, { locked = true, description = "Toggle monitor input source" })
+
 -- Lid switch: disable/enable internal display (Hyprland migrates workspaces automatically)
 -- Requires HandleLidSwitch=ignore in /etc/systemd/logind.conf.d/lid.conf
 -- NOTE: must use hl.get_monitors() (native), not io.popen("hyprctl ...") --
