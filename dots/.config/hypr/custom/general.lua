@@ -85,6 +85,17 @@ for i = 1, 2 do
     end
 end
 
+
+for i = 1, 1 do
+    local mousenames = { "micro-star-int'l-co.--ltd.-msi-versa-frieren-edition" }
+    for j = 1, 4 do
+        hl.device({
+            name = mousenames[i] .. "-" .. j,
+            sensitivity = -0.6,
+        })
+    end
+end
+
 -- Hyprgrass (everything below only applies if the plugin is loaded)
 local function is_plugin_loaded(name)
     for _, plugin in ipairs(hl.get_loaded_plugins()) do
