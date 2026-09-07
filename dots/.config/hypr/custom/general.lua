@@ -86,8 +86,8 @@ for i = 1, 2 do
 end
 
 
-for i = 1, 1 do
-    local mousenames = { "micro-star-int'l-co.--ltd.-msi-versa-frieren-edition" }
+for i = 1, 2 do
+    local mousenames = { "micro-star-int'l-co.--ltd.-msi-versa-frieren-edition", "micro-star-int'l-co.--ltd.-msi-versa-wireless-frieren-edition" }
     for j = 1, 4 do
         hl.device({
             name = mousenames[i] .. "-" .. j,
