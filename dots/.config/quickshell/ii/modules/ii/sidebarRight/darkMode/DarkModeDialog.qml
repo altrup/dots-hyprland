@@ -6,7 +6,7 @@ import qs.services
 
 WindowDialog {
     id: root
-    backgroundHeight: 360
+    backgroundHeight: 300
 
     WindowDialogTitle {
         text: Translation.tr("Appearance")
