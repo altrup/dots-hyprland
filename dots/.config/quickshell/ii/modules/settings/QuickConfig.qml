@@ -170,19 +170,6 @@ ContentPage {
             }
         }
 
-        ContentSubsection {
-            visible: Appearance.m3colors.darkmode
-            title: Translation.tr("Dark style")
-            ConfigSelectionArray {
-                currentValue: Config.options.appearance.darkStyle
-                onSelected: newValue => MaterialThemeLoader.setDarkStyle(newValue)
-                options: [
-                    { value: "standard", displayName: Translation.tr("Standard") },
-                    { value: "pure-black", displayName: Translation.tr("Pure black") }
-                ]
-            }
-        }
-
         ConfigSelectionArray {
             currentValue: Config.options.appearance.palette.type
             onSelected: newValue => {
@@ -227,6 +214,19 @@ ContentPage {
                     "displayName": Translation.tr("Tonal Spot")
                 }
             ]
+        }
+
+        ContentSubsection {
+            visible: Appearance.m3colors.darkmode
+            title: Translation.tr("Dark style")
+            ConfigSelectionArray {
+                currentValue: Config.options.appearance.darkStyle
+                onSelected: newValue => MaterialThemeLoader.setDarkStyle(newValue)
+                options: [
+                    { value: "standard", displayName: Translation.tr("Standard") },
+                    { value: "pure-black", displayName: Translation.tr("Pure black") }
+                ]
+            }
         }
 
         ConfigSwitch {
