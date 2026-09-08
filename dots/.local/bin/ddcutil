@@ -13,6 +13,7 @@ import time
 from collections.abc import Iterator
 
 Band = tuple[int, int, int, int, int]
+DRM_ROOT = Path("/sys/class/drm")
 
 
 def read_json(path: Path) -> object:
@@ -106,12 +107,52 @@ def monitors(text: str) -> list[dict[str, str]]:
         if bus:
             fields["display"] = display[1]
             fields["bus"] = bus[1]
+            for name in ("Mfg id", "Product code", "Binary serial number"):
+                fields[name] = fields.get(name, "").split(" ")[0]
             found.append(fields)
     return found
 
 
+def sysfs_monitor(bus: int) -> dict[str, str] | None:
+    found = []
+    try:
+        for connector in DRM_ROOT.glob("card*-*"):
+            buses = list(connector.glob("i2c-*")) or [connector / "ddc"]
+            if not any(path.resolve().name == f"i2c-{bus}" for path in buses):
+                continue
+            if (connector / "status").read_text().strip() != "connected":
+                return None
+            edid = (connector / "edid").read_bytes()[:128]
+            if len(edid) != 128 or edid[:8] != b"\x00\xff\xff\xff\xff\xff\xff\x00" or sum(edid) % 256:
+                return None
+            manufacturer = int.from_bytes(edid[8:10], "big")
+            fields = {
+                "bus": str(bus),
+                "DRM_connector": connector.name,
+                "Mfg id": "".join(chr(((manufacturer >> shift) & 31) + 64) for shift in (10, 5, 0)),
+                "Product code": str(int.from_bytes(edid[10:12], "little")),
+                "Binary serial number": str(int.from_bytes(edid[12:16], "little")),
+                "Serial number": "",
+                "Model": "",
+            }
+            for offset in (54, 72, 90, 108):
+                descriptor = edid[offset:offset + 18]
+                if descriptor[:3] == b"\x00\x00\x00" and descriptor[3] in (0xFC, 0xFF):
+                    name = "Model" if descriptor[3] == 0xFC else "Serial number"
+                    fields[name] = descriptor[5:18].split(b"\n")[0].decode("ascii").strip()
+            if not fields["Model"]:
+                return None
+            found.append(fields)
+    except (OSError, UnicodeError):
+        return None
+    return found[0] if len(found) == 1 else None
+
+
 def select_monitor(real: str, options: argparse.Namespace, match: dict[str, object]) -> dict[str, str] | None:
-    found = monitors(checked(real, ["--noconfig", "--disable-udf", "detect"]))
+    direct = None
+    if options.bus is not None and all(getattr(options, name) is None for name in ("display", "mfg", "model", "sn", "edid")):
+        direct = sysfs_monitor(options.bus)
+    found = [direct] if direct is not None else monitors(checked(real, ["--noconfig", "--disable-udf", "detect"]))
     for option, field in [("bus", "bus"), ("display", "display"), ("model", "Model"), ("sn", "Serial number")]:
         value = getattr(options, option)
         if value is not None:
@@ -124,7 +165,7 @@ def select_monitor(real: str, options: argparse.Namespace, match: dict[str, obje
             connector = monitor.get("DRM_connector", "")
             if not re.fullmatch(r"card\d+-[\w-]+", connector):
                 raise ValueError("Cannot verify the EDID selector")
-            if (Path("/sys/class/drm") / connector / "edid").read_bytes()[:128].hex() == options.edid.lower():
+            if (DRM_ROOT / connector / "edid").read_bytes()[:128].hex() == options.edid.lower():
                 selected.append(monitor)
         found = selected
     targets = [monitor for monitor in found if (

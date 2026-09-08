@@ -64,6 +64,11 @@ and `setvcp 10 - VALUE` commands clamp to 0–100. Brightness write options are
 limited to the supported selectors, output flags, verification flags,
 `--sleep-multiplier`, and `--maxtries`; unsupported options are rejected.
 
+Bus-only commands verify monitor identity from the kernel's connector and EDID
+files, without a full `ddcutil detect` call. Missing, invalid, or ambiguous
+kernel data falls back to detection. Other selectors also use detection.
+Hardware settings are still read before and after each write.
+
 Writes hold a monitor-specific lock. Pending absolute writes skip values
 superseded by a newer request; relative writes are serialized individually.
 Local dimming changes precede hardware brightness changes in both directions. Both
