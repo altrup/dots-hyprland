@@ -18,6 +18,7 @@ DelegateChooser {
     signal openAudioInputDialog()
     signal openBluetoothDialog()
     signal openNightLightDialog()
+    signal openDarkModeDialog()
     signal openWifiDialog()
 
     role: "type"
@@ -107,6 +108,7 @@ DelegateChooser {
         baseCellHeight: root.baseCellHeight
         cellSpacing: root.spacing
         cellSize: modelData.size
+        onOpenMenu: root.openDarkModeDialog()
     } }
 
     DelegateChoice { roleValue: "easyEffects"; AndroidEasyEffectsToggle {

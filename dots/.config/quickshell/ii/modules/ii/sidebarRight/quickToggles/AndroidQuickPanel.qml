@@ -105,6 +105,7 @@ AbstractQuickPanel {
                             onOpenAudioInputDialog: root.openAudioInputDialog()
                             onOpenBluetoothDialog: root.openBluetoothDialog()
                             onOpenNightLightDialog: root.openNightLightDialog()
+                            onOpenDarkModeDialog: root.openDarkModeDialog()
                             onOpenWifiDialog: root.openWifiDialog()
                         }
                     }

@@ -14,6 +14,7 @@ import qs.modules.ii.sidebarRight.quickToggles.classicStyle
 
 import qs.modules.ii.sidebarRight.bluetoothDevices
 import qs.modules.ii.sidebarRight.nightLight
+import qs.modules.ii.sidebarRight.darkMode
 import qs.modules.ii.sidebarRight.volumeMixer
 import qs.modules.ii.sidebarRight.wifiNetworks
 
@@ -26,6 +27,7 @@ Item {
     property bool showAudioInputDialog: false
     property bool showBluetoothDialog: false
     property bool showNightLightDialog: false
+    property bool showDarkModeDialog: false
     property bool showWifiDialog: false
     property bool editMode: false
 
@@ -37,6 +39,7 @@ Item {
                 root.showBluetoothDialog = false;
                 root.showAudioOutputDialog = false;
                 root.showAudioInputDialog = false;
+                root.showDarkModeDialog = false;
             }
         }
     }
@@ -144,6 +147,11 @@ Item {
     }
 
     ToggleDialog {
+        shownPropertyString: "showDarkModeDialog"
+        dialog: DarkModeDialog {}
+    }
+
+    ToggleDialog {
         shownPropertyString: "showWifiDialog"
         dialog: WifiDialog {}
         onShownChanged: {
@@ -200,6 +208,9 @@ Item {
             }
             function onOpenNightLightDialog() {
                 root.showNightLightDialog = true;
+            }
+            function onOpenDarkModeDialog() {
+                root.showDarkModeDialog = true;
             }
             function onOpenWifiDialog() {
                 root.showWifiDialog = true;
