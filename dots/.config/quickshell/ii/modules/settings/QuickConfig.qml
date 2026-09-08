@@ -32,7 +32,7 @@ ContentPage {
         toggled: Appearance.m3colors.darkmode === dark
         colBackground: Appearance.colors.colLayer2
         onClicked: {
-            Quickshell.execDetached(["bash", "-c", `${Directories.wallpaperSwitchScriptPath} --mode ${dark ? "dark" : "light"} --noswitch`]);
+            MaterialThemeLoader.setMode(dark ? "dark" : "light");
         }
         contentItem: Item {
             anchors.centerIn: parent
@@ -170,6 +170,19 @@ ContentPage {
             }
         }
 
+        ContentSubsection {
+            visible: Appearance.m3colors.darkmode
+            title: Translation.tr("Dark style")
+            ConfigSelectionArray {
+                currentValue: Config.options.appearance.darkStyle
+                onSelected: newValue => MaterialThemeLoader.setDarkStyle(newValue)
+                options: [
+                    { value: "standard", displayName: Translation.tr("Standard") },
+                    { value: "midnight", displayName: Translation.tr("Midnight") }
+                ]
+            }
+        }
+
         ConfigSelectionArray {
             currentValue: Config.options.appearance.palette.type
             onSelected: newValue => {
@@ -219,6 +232,7 @@ ContentPage {
         ConfigSwitch {
             buttonIcon: "ev_shadow"
             text: Translation.tr("Transparency")
+            enabled: !Appearance.midnight
             checked: Config.options.appearance.transparency.enable
             onCheckedChanged: {
                 Config.options.appearance.transparency.enable = checked;

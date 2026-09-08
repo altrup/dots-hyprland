@@ -14,6 +14,27 @@ import Quickshell.Hyprland
 Singleton {
     id: root
     property string filePath: Directories.generatedMaterialThemePath
+    property bool darkStylePending: false
+
+    function setDarkStyle(style) {
+        if (!["standard", "midnight"].includes(style) || Config.options.appearance.darkStyle === style) return;
+        root.darkStylePending = true;
+        Config.options.appearance.darkStyle = style;
+    }
+
+    Connections {
+        target: Config
+        function onSaved() {
+            if (!root.darkStylePending) return;
+            root.darkStylePending = false;
+            Quickshell.execDetached([Directories.wallpaperSwitchScriptPath, "--noswitch"]);
+        }
+    }
+
+    function setMode(mode) {
+        if (!["light", "dark"].includes(mode)) return;
+        Quickshell.execDetached([Directories.wallpaperSwitchScriptPath, "--mode", mode, "--noswitch"]);
+    }
 
     function reapplyTheme() {
         themeFileView.reload()
@@ -74,8 +95,7 @@ Singleton {
     }
 
     function toggleLightDark() {
-        const currentlyDark = Appearance.m3colors.darkmode;
-        Quickshell.execDetached([Directories.wallpaperSwitchScriptPath, "--mode", currentlyDark ? "light" : "dark", "--noswitch"]);
+        root.setMode(Appearance.m3colors.darkmode ? "light" : "dark");
     }
 
     GlobalShortcut {

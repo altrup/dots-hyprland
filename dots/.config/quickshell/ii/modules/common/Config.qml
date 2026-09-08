@@ -12,6 +12,7 @@ Singleton {
     property bool ready: false
     property int readWriteDelay: 50 // milliseconds
     property bool blockWrites: false
+    signal saved()
 
     function setNestedValue(nestedKey, value) {
         let keys = nestedKey.split(".");
@@ -68,6 +69,7 @@ Singleton {
         blockWrites: root.blockWrites
         onFileChanged: fileReloadTimer.restart()
         onAdapterUpdated: fileWriteTimer.restart()
+        onSaved: root.saved()
         onLoaded: root.ready = true
         onLoadFailed: error => {
             if (error == FileViewError.FileNotFound) {
@@ -105,6 +107,7 @@ Singleton {
             }
 
             property JsonObject appearance: JsonObject {
+                property string darkStyle: "standard"
                 property bool extraBackgroundTint: true
                 property int fakeScreenRounding: 2 // 0: None | 1: Always | 2: When not fullscreen
                 property JsonObject fonts: JsonObject {
