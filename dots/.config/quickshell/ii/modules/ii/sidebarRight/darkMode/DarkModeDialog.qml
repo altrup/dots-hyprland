@@ -23,6 +23,7 @@ WindowDialog {
     }
 
     ConfigSelectionArray {
+        Layout.topMargin: -8
         currentValue: Appearance.m3colors.darkmode ? "dark" : "light"
         onSelected: newValue => MaterialThemeLoader.setMode(newValue)
         options: [
@@ -34,6 +35,7 @@ WindowDialog {
     ColumnLayout {
         visible: Appearance.m3colors.darkmode
         Layout.fillWidth: true
+        Layout.fillHeight: false
         spacing: 16
 
         WindowDialogSectionHeader {
@@ -47,6 +49,7 @@ WindowDialog {
         }
 
         ConfigSelectionArray {
+            Layout.topMargin: -8
             currentValue: Config.options.appearance.darkStyle
             onSelected: newValue => MaterialThemeLoader.setDarkStyle(newValue)
             options: [
@@ -55,6 +58,8 @@ WindowDialog {
             ]
         }
     }
+
+    Item { Layout.fillHeight: true }
 
     WindowDialogButtonRow {
         Layout.fillWidth: true
