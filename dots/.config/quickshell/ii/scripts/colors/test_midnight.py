@@ -1,4 +1,5 @@
 import json
+import configparser
 from pathlib import Path
 import subprocess
 import sys
@@ -10,6 +11,27 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 
 class MidnightTest(unittest.TestCase):
+    def test_kde_backgrounds_colors_and_repeated_application(self):
+        from midnight import midnight_scheme
+        scheme = configparser.ConfigParser(interpolation=None)
+        scheme.optionxform = str
+        scheme.read_string('[General]\nName=Material You dark\n'
+                           '[Colors:Window]\nBackgroundNormal=#211f24\nForegroundNormal=#e6e0e9\n'
+                           '[Colors:View]\nBackgroundNormal=#141218\n'
+                           '[Colors:Button]\nBackgroundNormal=#2b292f\n'
+                           '[WM]\nactiveBackground=43,41,47,200\n'
+                           '[KDE]\ncontrast=4\n')
+        self.assertTrue(midnight_scheme(scheme))
+        self.assertEqual(scheme['Colors:Window']['BackgroundNormal'], '#000000')
+        self.assertEqual(scheme['Colors:View']['BackgroundNormal'], '#000000')
+        self.assertNotEqual(scheme['Colors:Button']['BackgroundNormal'], '#000000')
+        self.assertNotEqual(scheme['Colors:Window']['ForegroundNormal'], '#000000')
+        self.assertEqual(scheme['WM']['activeBackground'].split(',')[-1], '200')
+        self.assertEqual(scheme['KDE']['contrast'], '4')
+        before = {key: dict(scheme[key]) for key in scheme}
+        self.assertFalse(midnight_scheme(scheme))
+        self.assertEqual(before, {key: dict(scheme[key]) for key in scheme})
+
     def test_all_palettes_match_matugen_and_keep_readable_surfaces(self):
         for palette in ('content', 'expressive', 'fidelity', 'fruit-salad', 'monochrome',
                         'neutral', 'rainbow', 'tonal-spot', 'vibrant'):
