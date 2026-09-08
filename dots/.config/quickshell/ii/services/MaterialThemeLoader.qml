@@ -17,7 +17,7 @@ Singleton {
     property bool darkStylePending: false
 
     function setDarkStyle(style) {
-        if (!["standard", "midnight"].includes(style) || Config.options.appearance.darkStyle === style) return;
+        if (!["standard", "pure-black"].includes(style) || Config.options.appearance.darkStyle === style) return;
         root.darkStylePending = true;
         Config.options.appearance.darkStyle = style;
     }

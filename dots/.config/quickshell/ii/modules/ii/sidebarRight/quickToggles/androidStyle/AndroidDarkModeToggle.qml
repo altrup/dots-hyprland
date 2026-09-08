@@ -19,7 +19,7 @@ AndroidQuickToggleButton {
         palette.highlightedText: Appearance.colors.colOnPrimary
 
         Controls.ButtonGroup { buttons: [lightItem, darkItem] }
-        Controls.ButtonGroup { buttons: [standardItem, midnightItem] }
+        Controls.ButtonGroup { buttons: [standardItem, pureBlackItem] }
         Controls.MenuItem {
             id: lightItem
             text: Translation.tr("Light")
@@ -54,13 +54,13 @@ AndroidQuickToggleButton {
             onTriggered: MaterialThemeLoader.setDarkStyle("standard")
         }
         Controls.MenuItem {
-            id: midnightItem
-            text: Translation.tr("Midnight")
+            id: pureBlackItem
+            text: Translation.tr("Pure black")
             visible: Appearance.m3colors.darkmode
             height: visible ? implicitHeight : 0
             checkable: true
-            checked: Config.options.appearance.darkStyle === "midnight"
-            onTriggered: MaterialThemeLoader.setDarkStyle("midnight")
+            checked: Config.options.appearance.darkStyle === "pure-black"
+            onTriggered: MaterialThemeLoader.setDarkStyle("pure-black")
         }
     }
 }

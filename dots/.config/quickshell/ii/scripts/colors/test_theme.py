@@ -8,7 +8,7 @@ import tempfile
 
 SOURCE = Path(__file__).resolve().parents[2]
 
-with tempfile.TemporaryDirectory(prefix='midnight-theme-') as directory:
+with tempfile.TemporaryDirectory(prefix='pure_black-theme-') as directory:
     root = Path(directory)
     (root / 'Placeholder.qml').write_text('import QtQuick\nQtObject {}\n')
     files = (
@@ -83,30 +83,30 @@ ShellRoot {
                 Config.options.appearance.transparency.contentTransparency = 0.5;
                 menu.itemAt(5).triggered();
                 check(MaterialThemeLoader.darkStylePending, "Generation must wait for save");
-                check(Config.options.appearance.darkStyle === "midnight", "Menu must select Midnight");
+                check(Config.options.appearance.darkStyle === "pure-black", "Menu must select PureBlack");
                 MaterialThemeLoader.setDarkStyle("invalid");
                 step++;
             } else if (step === 1 && !MaterialThemeLoader.darkStylePending) {
-                check(Appearance.midnight && Appearance.backgroundTransparency === 0
-                      && Appearance.contentTransparency === 0, "Midnight must be opaque");
-                check(Appearance.colors.colLayer0Base == Appearance.m3colors.m3background, "Midnight must suppress tint");
+                check(Appearance.pureBlack && Appearance.backgroundTransparency === 0
+                      && Appearance.contentTransparency === 0, "Pure black must be opaque");
+                check(Appearance.colors.colLayer0Base == Appearance.m3colors.m3background, "Pure black must suppress tint");
                 Appearance.m3colors.darkmode = false;
                 check(!menu.itemAt(4).visible && !menu.itemAt(5).visible, "Hide dark styles in Light");
-                check(!Appearance.midnight && Appearance.backgroundTransparency === 0.3, "Restore Light transparency");
-                check(Config.options.appearance.darkStyle === "midnight", "Remember dark style in Light");
+                check(!Appearance.pureBlack && Appearance.backgroundTransparency === 0.3, "Restore Light transparency");
+                check(Config.options.appearance.darkStyle === "pure-black", "Remember dark style in Light");
                 menu.itemAt(1).triggered();
                 Appearance.m3colors.darkmode = true;
-                check(Appearance.midnight && menu.itemAt(5).checked, "Restore Midnight in Dark");
+                check(Appearance.pureBlack && menu.itemAt(5).checked, "Restore Pure black in Dark");
                 toggle.clicked();
                 menu.itemAt(4).triggered();
                 step++;
             } else if (step === 2 && !MaterialThemeLoader.darkStylePending) {
-                check(!Appearance.midnight && Appearance.backgroundTransparency === 0.3
+                check(!Appearance.pureBlack && Appearance.backgroundTransparency === 0.3
                       && Appearance.contentTransparency === 0.5, "Restore Standard preferences");
                 MaterialThemeLoader.setMode("invalid");
                 step++;
             } else if (step === 3) {
-                console.log("MIDNIGHT UI CHECK PASSED");
+                console.log("PURE BLACK UI CHECK PASSED");
                 Qt.quit();
             }
         }
@@ -121,10 +121,10 @@ ShellRoot {
     result = subprocess.run(['quickshell', '--path', str(root / 'shell.qml'), '--no-color'],
                             env=environment, text=True, capture_output=True, timeout=15)
     output = result.stdout + result.stderr
-    assert result.returncode == 0 and 'MIDNIGHT UI CHECK PASSED' in output, output
+    assert result.returncode == 0 and 'PURE BLACK UI CHECK PASSED' in output, output
     assert (root / 'calls.jsonl').exists(), output
     calls = [json.loads(line) for line in (root / 'calls.jsonl').read_text().splitlines()]
-    assert {'args': ['--noswitch'], 'style': 'midnight'} in calls, calls
+    assert {'args': ['--noswitch'], 'style': 'pure-black'} in calls, calls
     assert {'args': ['--noswitch'], 'style': 'standard'} in calls, calls
     assert any(call['args'] == ['--mode', 'dark', '--noswitch'] for call in calls), calls
     assert any(call['args'] == ['--mode', 'light', '--noswitch'] for call in calls), calls

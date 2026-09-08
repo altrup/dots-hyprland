@@ -178,7 +178,7 @@ ContentPage {
                 onSelected: newValue => MaterialThemeLoader.setDarkStyle(newValue)
                 options: [
                     { value: "standard", displayName: Translation.tr("Standard") },
-                    { value: "midnight", displayName: Translation.tr("Midnight") }
+                    { value: "pure-black", displayName: Translation.tr("Pure black") }
                 ]
             }
         }
@@ -232,7 +232,7 @@ ContentPage {
         ConfigSwitch {
             buttonIcon: "ev_shadow"
             text: Translation.tr("Transparency")
-            enabled: !Appearance.midnight
+            enabled: !Appearance.pureBlack
             checked: Config.options.appearance.transparency.enable
             onCheckedChanged: {
                 Config.options.appearance.transparency.enable = checked;

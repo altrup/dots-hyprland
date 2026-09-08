@@ -279,9 +279,9 @@ switch() {
         fi
     fi
     [[ -n "$type_flag" ]] && matugen_args+=(--type "$type_flag") && generate_colors_material_args+=(--scheme "$type_flag")
-    if [[ $(jq -r '.appearance.darkStyle // "standard"' "$SHELL_CONFIG_FILE") == "midnight" ]]; then
+    if [[ $(jq -r '.appearance.darkStyle // "standard"' "$SHELL_CONFIG_FILE") == "pure-black" ]]; then
         matugen_args+=(--lightness-dark -0.1)
-        generate_colors_material_args+=(--dark-style midnight)
+        generate_colors_material_args+=(--dark-style pure-black)
     fi
     generate_colors_material_args+=(--termscheme "$terminalscheme" --blend_bg_fg)
     generate_colors_material_args+=(--cache "$STATE_DIR/user/generated/color.txt")
