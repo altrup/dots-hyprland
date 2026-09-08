@@ -1,0 +1,305 @@
+#!/usr/bin/python3
+import argparse
+from contextlib import contextmanager
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import time
+from collections.abc import Iterator
+
+Band = tuple[int, int, int, int, int]
+
+
+def read_json(path: Path) -> object:
+    return json.loads(path.read_text())
+
+
+def integer(value: object) -> int:
+    if type(value) is not int:
+        raise ValueError("Expected an integer in the brightness configuration")
+    return value
+
+
+def pair(value: object) -> tuple[int, int]:
+    if not isinstance(value, list) or len(value) != 2:
+        raise ValueError("Expected a two-value range in the brightness configuration")
+    return integer(value[0]), integer(value[1])
+
+
+def bands_from(config: dict[str, object]) -> list[Band]:
+    bands = config.get("bands")
+    if not isinstance(bands, list) or len(bands) != 4:
+        raise ValueError("Configure all four local-dimming bands")
+    result = []
+    for band in bands:
+        if not isinstance(band, dict) or band.get("local_dimming") is None:
+            raise ValueError("Local-dimming values are unconfirmed; measure F4 before enabling brightness writes")
+        low, high = pair(band.get("virtual"))
+        minimum, maximum = pair(band.get("hardware"))
+        mode = integer(band.get("local_dimming"))
+        if not 0 <= low < high <= 100 or not 0 <= minimum < maximum <= 65535 or not 0 <= mode <= 255:
+            raise ValueError("Invalid brightness band")
+        if low != (result[-1][1] if result else 0):
+            raise ValueError("Virtual bands must be contiguous and start at zero")
+        result.append((low, high, minimum, maximum, mode))
+    if result[-1][1] != 100 or len({band[4] for band in result}) != 4:
+        raise ValueError("Bands must end at 100 and use four distinct F4 values")
+    return result
+
+
+def translate(value: int, bands: list[Band]) -> tuple[int, int]:
+    for low, high, minimum, maximum, mode in bands:
+        if value <= high:
+            hardware = minimum + ((value - low) * (maximum - minimum) + (high - low) // 2) // (high - low)
+            return mode, hardware
+    raise ValueError("Virtual brightness must be between 0 and 100")
+
+
+def virtual_value(mode: int, hardware: int, bands: list[Band], state: Path) -> int:
+    try:
+        saved = read_json(state)
+        if isinstance(saved, dict):
+            value = integer(saved.get("virtual"))
+            if 0 <= value <= 100 and translate(value, bands) == (mode, hardware):
+                return value
+    except (OSError, ValueError, TypeError):
+        pass
+    for low, high, minimum, maximum, candidate in bands:
+        if candidate == mode:
+            hardware = min(max(hardware, minimum), maximum)
+            return low + ((hardware - minimum) * (high - low) + (maximum - minimum) // 2) // (maximum - minimum)
+    raise ValueError(f"F4 value {mode} is outside the configured bands (possibly Auto); set an absolute virtual brightness")
+
+
+@contextmanager
+def locked(path: Path) -> Iterator[None]:
+    with path.open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
+def native(real: str, args: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run([real, *args], text=True, capture_output=True, timeout=60, env={**os.environ, "LC_ALL": "C"})
+
+
+def checked(real: str, args: list[str]) -> str:
+    result = native(real, args)
+    if result.returncode:
+        sys.stderr.write(result.stderr)
+        raise RuntimeError(f"ddcutil failed with status {result.returncode}: {' '.join(args)}")
+    return result.stdout
+
+
+def monitors(text: str) -> list[dict[str, str]]:
+    found = []
+    for block in re.split(r"(?m)^(?=Display \d+|Invalid display)", text):
+        display = re.match(r"Display (\d+)\s*\n", block)
+        if not display:
+            continue
+        fields = dict(re.findall(r"(?m)^\s*([^:\n]+):[^\S\n]*([^\n]*)$", block))
+        bus = re.search(r"/dev/i2c-(\d+)", fields.get("I2C bus", ""))
+        if bus:
+            fields["display"] = display[1]
+            fields["bus"] = bus[1]
+            found.append(fields)
+    return found
+
+
+def select_monitor(real: str, options: argparse.Namespace, match: dict[str, object]) -> dict[str, str] | None:
+    found = monitors(checked(real, ["--noconfig", "--disable-udf", "detect"]))
+    for option, field in [("bus", "bus"), ("display", "display"), ("model", "Model"), ("sn", "Serial number")]:
+        value = getattr(options, option)
+        if value is not None:
+            found = [monitor for monitor in found if monitor.get(field) == str(value)]
+    if options.mfg is not None:
+        found = [monitor for monitor in found if monitor.get("Mfg id", "").split(" - ")[0] == options.mfg]
+    if options.edid is not None:
+        selected = []
+        for monitor in found:
+            connector = monitor.get("DRM_connector", "")
+            if not re.fullmatch(r"card\d+-[\w-]+", connector):
+                raise ValueError("Cannot verify the EDID selector")
+            if (Path("/sys/class/drm") / connector / "edid").read_bytes()[:128].hex() == options.edid.lower():
+                selected.append(monitor)
+        found = selected
+    targets = [monitor for monitor in found if (
+        monitor.get("Mfg id", "").split(" - ")[0] == match.get("manufacturer")
+        and monitor.get("Model") == match.get("model")
+        and monitor.get("Product code", "").split(" ")[0] == str(match.get("product_code"))
+    )]
+    if not targets:
+        return None
+    if len(found) != 1:
+        raise ValueError("Ambiguous monitor selection; specify --bus or --display")
+    return targets[0]
+
+
+def read_hardware(real: str, base: list[str]) -> tuple[int, int, int]:
+    output = checked(real, [*base, "getvcp", "10", "F4", "--brief"])
+    brightness = re.search(r"(?m)^VCP 10 C (\d+) (\d+)\s*$", output)
+    dimming = re.search(r"(?m)^VCP F4 CNC x([0-9a-f]{2}) x([0-9a-f]{2}) x([0-9a-f]{2}) x([0-9a-f]{2})\s*$", output, re.I)
+    if not brightness or not dimming or int(dimming[3], 16) != 0:
+        raise ValueError("Cannot read brightness and local dimming from the monitor")
+    return int(dimming[4], 16), int(brightness[1]), int(brightness[2])
+
+
+def write_brightness(real: str, base: list[str], value: int, bands: list[Band], state: Path) -> None:
+    mode, hardware, maximum = read_hardware(real, base)
+    wanted_mode, wanted_hardware = translate(value, bands)
+    if wanted_hardware > maximum:
+        raise ValueError("Configured brightness exceeds the monitor maximum")
+    state.unlink(missing_ok=True)
+    changes = []
+    if wanted_mode != mode:
+        changes.append(("F4", wanted_mode))
+    if wanted_hardware != hardware:
+        changes.append(("10", wanted_hardware))
+    for code, setting in changes:
+        checked(real, [*base, "--noverify", "--permit-unknown-feature", "setvcp", code, str(setting)])
+    if read_hardware(real, base)[:2] != (wanted_mode, wanted_hardware):
+        raise RuntimeError("Monitor readback does not match the requested brightness; state was not saved")
+    temporary = state.with_suffix(".tmp")
+    temporary.write_text(json.dumps({"virtual": value}))
+    temporary.replace(state)
+
+
+def parser() -> argparse.ArgumentParser:
+    result = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    for flags in [("-b", "--bus"), ("-d", "--display", "--dis"), ("-g", "--mfg"), ("-l", "--model"), ("-n", "--sn"), ("-e", "--edid"), ("-u", "--usb"), ("--hiddev",)]:
+        result.add_argument(*flags, type=int if flags[0] in ("-b", "-d") else str)
+    result.add_argument("-t", "--terse", "--brief", action="store_true")
+    result.add_argument("-v", "--verbose", action="store_true")
+    for flag in ["noconfig", "verify", "noverify", "disable-udf", "enable-udf", "permit-unknown-feature"]:
+        result.add_argument("--" + flag, action="store_true")
+    for flag in ["sleep-multiplier", "maxtries"]:
+        result.add_argument("--" + flag)
+    return result
+
+
+def write_codes(values: list[str]) -> list[int]:
+    codes = []
+    index = 0
+    while index < len(values):
+        codes.append(int(values[index], 16))
+        index += 1
+        if index < len(values) and values[index] in ("+", "-"):
+            index += 1
+        if index >= len(values):
+            raise ValueError("Missing VCP value")
+        index += 1
+    return codes
+
+
+def main() -> int:
+    started = time.monotonic_ns()
+    boot = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+    generation = f"{boot}:{started}"
+    args = sys.argv[1:]
+    config_path = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "ktc-brightness/config.json"
+    config = read_json(config_path) if config_path.exists() else {}
+    if not isinstance(config, dict):
+        raise ValueError("Brightness configuration must be a JSON object")
+    real = config.get("real_ddcutil", "/usr/bin/ddcutil")
+    if not isinstance(real, str) or not Path(real).is_absolute() or Path(real).resolve() == Path(__file__).resolve():
+        raise ValueError("real_ddcutil must be an absolute path to the real executable")
+
+    def passthrough() -> None:
+        os.execv(real, [real, *args])
+
+    if not any(command in args for command in ("getvcp", "setvcp")) or any(flag in args for flag in ("--help", "-h", "--version", "-V")):
+        passthrough()
+    options, rest = parser().parse_known_args(args)
+    if options.usb or options.hiddev:
+        passthrough()
+    commands = [index for index, value in enumerate(rest) if value in ("getvcp", "setvcp")]
+    if len(commands) != 1:
+        raise ValueError("Unsupported brightness command syntax")
+    index = commands[0]
+    command, *values = rest[index:]
+    if command == "getvcp" and values and all(re.fullmatch(r"(?:0x)?[0-9a-f]{2}", code, re.I) and int(code, 16) != 16 for code in values):
+        passthrough()
+    if command == "setvcp":
+        try:
+            if 16 not in write_codes(values):
+                passthrough()
+        except ValueError:
+            pass
+    match = config.get("monitor", {"manufacturer": "SKG", "model": "M27T6S", "product_code": 10130})
+    if (not isinstance(match, dict)
+            or not isinstance(match.get("manufacturer"), str) or not match["manufacturer"]
+            or not isinstance(match.get("model"), str) or not match["model"]
+            or type(match.get("product_code")) is not int):
+        raise ValueError("Invalid monitor match configuration")
+    monitor = select_monitor(real, options, match)
+    if monitor is None:
+        passthrough()
+    if command == "setvcp" and (index or any(value.startswith("--") for value in values)):
+        raise ValueError("Unsupported option for virtual brightness")
+    base = ["--noconfig", "--disable-udf", "--bus", monitor["bus"]]
+    for flag in ["sleep-multiplier", "maxtries"]:
+        setting = getattr(options, flag.replace("-", "_"))
+        if setting is not None:
+            base.extend(["--" + flag, setting])
+    state_dir = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "ktc-brightness"
+    state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    identity = "|".join(monitor.get(field, "") for field in ["Mfg id", "Model", "Product code", "Serial number", "Binary serial number", "DRM_connector"])
+    key = hashlib.sha256(identity.encode()).hexdigest()[:24]
+    state = state_dir / (key + ".json")
+    lock = state_dir / (key + ".lock")
+    pending = state_dir / (key + ".pending")
+    queue_lock = state_dir / (key + ".queue-lock")
+    relative = 0
+    requested = None
+    if command == "setvcp":
+        if len(values) not in (2, 3) or values[0].lower() not in ("10", "0x10"):
+            raise ValueError("Set virtual brightness in a separate setvcp 10 command")
+        if len(values) == 3:
+            if values[1] not in ("+", "-"):
+                raise ValueError("Relative brightness requires + or - followed by a value")
+            relative = 1 if values[1] == "+" else -1
+        requested = int(values[-1], 16 if values[-1].lower().startswith("0x") else 10)
+        if requested < 0 or (not relative and requested > 100):
+            raise ValueError("Virtual brightness must be between 0 and 100")
+        bands = bands_from(config)
+        if not relative:
+            with locked(queue_lock):
+                previous_boot, _, previous_id = pending.read_text().partition(":") if pending.exists() else ("", "", "")
+                if previous_boot != boot or not previous_id.isdigit() or int(previous_id) < started:
+                    pending.write_text(generation)
+    with locked(lock):
+        if requested is not None:
+            if not relative:
+                with locked(queue_lock):
+                    if pending.read_text() != generation:
+                        return 0
+            else:
+                mode, hardware, _ = read_hardware(real, base)
+                requested = min(100, max(0, virtual_value(mode, hardware, bands, state) + relative * requested))
+            write_brightness(real, base, requested, bands, state)
+        else:
+            result = native(real, [*args, "--noconfig", "--disable-udf"])
+            sys.stderr.write(result.stderr)
+            brief = re.compile(r"(?m)^VCP 10 C \d+ \d+[ \t]*$")
+            normal = re.compile(r"(?mi)^(VCP code 0x10 .*?current value\s*=\s*)\d+(,\s*max value\s*=\s*)\d+")
+            if brief.search(result.stdout) or normal.search(result.stdout):
+                bands = bands_from(config)
+                mode, hardware, _ = read_hardware(real, base)
+                value = virtual_value(mode, hardware, bands, state)
+                result.stdout = brief.sub(f"VCP 10 C {value} 100", result.stdout)
+                result.stdout = normal.sub(lambda found: f"{found[1]}{value}{found[2]}100", result.stdout)
+            sys.stdout.write(result.stdout)
+            return result.returncode
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as error:
+        print(f"ktc-brightness: {error}", file=sys.stderr)
+        sys.exit(1)
