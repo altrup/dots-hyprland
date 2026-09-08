@@ -44,5 +44,13 @@ case "$scheme_variant_str" in
 esac
 
 source "$(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate"
-kde-material-you-colors "$mode_flag" --color "$color" -sv "$sv_num"
+terminal_args=()
+shell_config="${XDG_CONFIG_HOME:-$HOME/.config}/illogical-impulse/config.json"
+if [[ $(jq -r '.appearance.wallpaperTheming.enableTerminal' "$shell_config") == "false" ]]; then
+    terminal_args+=(--disable-konsole)
+fi
+if [[ $(jq -r '.appearance.wallpaperTheming.terminalGenerationProps.forceDarkMode' "$shell_config") == "true" ]]; then
+    terminal_args+=(--pywaldark)
+fi
+kde-material-you-colors "$mode_flag" --color "$color" -sv "$sv_num" "${terminal_args[@]}"
 deactivate

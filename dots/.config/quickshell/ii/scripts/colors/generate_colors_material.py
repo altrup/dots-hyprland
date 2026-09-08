@@ -2,6 +2,7 @@
 import argparse
 import math
 import json
+from pure_black import pure_black_color
 from PIL import Image
 from materialyoucolor.quantize import QuantizeCelebi
 from materialyoucolor.score.score import Score
@@ -15,6 +16,7 @@ parser.add_argument('--path', type=str, default=None, help='generate colorscheme
 parser.add_argument('--size', type=int , default=128 , help='bitmap image size')
 parser.add_argument('--color', type=str, default=None, help='generate colorscheme from color')
 parser.add_argument('--mode', type=str, choices=['dark', 'light'], default='dark', help='dark or light mode')
+parser.add_argument('--dark-style', choices=['standard', 'pure-black'], default='standard', help='style for dark mode')
 parser.add_argument('--scheme', type=str, default='vibrant', help='material scheme to use')
 parser.add_argument('--smart', action='store_true', default=False, help='decide scheme type based on image color')
 parser.add_argument('--transparency', type=str, choices=['opaque', 'transparent'], default='opaque', help='enable transparency')
@@ -131,6 +133,9 @@ else:
     material_colors['successContainer'] = '#D1E8D5'
     material_colors['onSuccessContainer'] = '#0C1F13'
 
+if darkmode and args.dark_style == 'pure-black':
+    material_colors = {key: pure_black_color(value) for key, value in material_colors.items()}
+
 # Terminal Colors
 if args.termscheme is not None:
     with open(args.termscheme, 'r') as f:
@@ -150,6 +155,9 @@ if args.termscheme is not None:
             harmonized = harmonize(hex_to_argb(val), primary_color_argb, args.harmonize_threshold, args.harmony)
             harmonized = boost_chroma_tone(harmonized, 1, 1 + (args.term_fg_boost * (1 if darkmode else -1)))
         term_colors[color] = argb_to_hex(harmonized)
+
+    if darkmode and args.dark_style == 'pure-black':
+        term_colors['term0'] = '#000000'
 
 if args.debug == False:
     print(f"$darkmode: {darkmode};")
