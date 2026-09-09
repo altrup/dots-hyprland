@@ -6,9 +6,9 @@
     "product_code": 10130
   },
   "bands": [
-    { "mode": "High", "virtual": [0, 25], "hardware": [0, 30], "local_dimming": 3 },
-    { "mode": "Standard", "virtual": [25, 50], "hardware": [20, 55], "local_dimming": 2 },
-    { "mode": "Low", "virtual": [50, 75], "hardware": [45, 80], "local_dimming": 4 },
-    { "mode": "Off", "virtual": [75, 100], "hardware": [70, 100], "local_dimming": 0 }
+    { "mode": "High", "virtual": [0, 50], "hardware": [0, 100], "local_dimming": 3 },
+    { "mode": "Standard", "virtual": [50, 60], "hardware": [70, 100], "local_dimming": 2 },
+    { "mode": "Low", "virtual": [60, 70], "hardware": [70, 100], "local_dimming": 4 },
+    { "mode": "Off", "virtual": [70, 100], "hardware": [30, 100], "local_dimming": 0 }
   ]
 }
