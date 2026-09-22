@@ -40,6 +40,23 @@ Singleton {
         }
     ]
 
+    // desktop field => { weight, get? }
+    readonly property var searchableDesktopFields: ({
+        name:           { weight: 1 },
+        keywords:       { weight: 0.9, get: a => a.keywords },
+        genericName:    { weight: 0.8 },
+        id:             { weight: 0.5, get: a => a.id.split(".").pop() },
+        comment:        { weight: 0.2 },
+    })
+    readonly property var searchableFieldNames: Object.keys(searchableDesktopFields)
+    readonly property var searchableFieldWeights: searchableFieldNames.map(f => searchableDesktopFields[f].weight)
+
+    function fieldValues(entry, field) {
+        const get = searchableDesktopFields[field].get;
+        const v = get ? get(entry) : entry[field];
+        return (Array.isArray(v) ? v : [v]).filter(s => s && s.length > 0);
+    }
+
     // Deduped list to fix double icons
     readonly property list<DesktopEntry> list: Array.from(DesktopEntries.applications.values)
         .filter((app, index, self) => 
@@ -47,11 +64,15 @@ Singleton {
                 t.id === app.id
             ))
     )
-    
-    readonly property var preppedNames: list.map(a => ({
-        name: Fuzzy.prepare(`${a.name} `),
-        entry: a
-    }))
+
+    readonly property var preppedNames: list.map(a => {
+        const o = { entry: a };
+        for (const f of root.searchableFieldNames) {
+            const values = root.fieldValues(a, f);
+            o[f] = values.length > 0 ? Fuzzy.prepare(`${values.join(" ")} `) : "";
+        }
+        return o;
+    })
 
     readonly property var preppedIcons: list.map(a => ({
         name: Fuzzy.prepare(`${a.icon} `),
@@ -62,7 +83,13 @@ Singleton {
         if (root.sloppySearch) {
             const results = list.map(obj => ({
                 entry: obj,
-                score: Levendist.computeScore(obj.name.toLowerCase(), search.toLowerCase())
+                score: Math.max(
+                    ...root.searchableFieldNames.flatMap(f => (
+                        root.fieldValues(obj, f).map((fv, i) => 
+                            Levendist.computeScore(fv.toLowerCase(), search.toLowerCase()) * root.searchableFieldWeights[i]
+                        )
+                    ))
+                )
             })).filter(item => item.score > root.scoreThreshold)
                 .sort((a, b) => b.score - a.score)
             return results
@@ -71,7 +98,10 @@ Singleton {
 
         return Fuzzy.go(search, preppedNames, {
             all: true,
-            key: "name"
+            keys: root.searchableFieldNames,
+            scoreFn: r => Math.max(
+                ...r.map(({ score }, i) => score * searchableFieldWeights[i])
+            )
         }).map(r => {
             return r.obj.entry
         });
