@@ -46,7 +46,6 @@ Singleton {
         keywords:       { weight: 0.9, get: a => a.keywords },
         genericName:    { weight: 0.8 },
         id:             { weight: 0.5, get: a => a.id.split(".").pop() },
-        comment:        { weight: 0.2 },
     })
     readonly property var searchableFieldNames: Object.keys(searchableDesktopFields)
     readonly property var searchableFieldWeights: searchableFieldNames.map(f => searchableDesktopFields[f].weight)
@@ -54,7 +53,8 @@ Singleton {
     function fieldValues(entry, field) {
         const get = searchableDesktopFields[field].get;
         const v = get ? get(entry) : entry[field];
-        return (Array.isArray(v) ? v : [v]).filter(s => s && s.length > 0);
+        const arr = typeof v === "string" ? [v] : Array.from(v ?? []);
+        return arr.filter(s => s && s.length > 0);
     }
 
     // Deduped list to fix double icons
@@ -64,6 +64,15 @@ Singleton {
                 t.id === app.id
             ))
     )
+
+    readonly property var preppedSloppy: list.map(a => {
+        const o = { entry: a };
+        for (const f of root.searchableFieldNames) {
+            const values = root.fieldValues(a, f);
+            o[f] = values.length > 0 ? values.map(v => v.toLowerCase()) : [];
+        }
+        return o;
+    })
 
     readonly property var preppedNames: list.map(a => {
         const o = { entry: a };
@@ -81,12 +90,16 @@ Singleton {
 
     function fuzzyQuery(search: string): var { // Idk why list<DesktopEntry> doesn't work
         if (root.sloppySearch) {
-            const results = list.map(obj => ({
-                entry: obj,
+            const q = search.toLowerCase();
+            const results = preppedSloppy.map(obj => ({
+                entry: obj.entry,
                 score: Math.max(
-                    ...root.searchableFieldNames.flatMap(f => (
-                        root.fieldValues(obj, f).map((fv, i) => 
-                            Levendist.computeScore(fv.toLowerCase(), search.toLowerCase()) * root.searchableFieldWeights[i]
+                    0,
+                    ...root.searchableFieldNames.map((f, i) => (
+                        Math.max(
+                            ...obj[f].map(fv => 
+                                Levendist.computeScore(fv, q) * root.searchableFieldWeights[i]
+                            )
                         )
                     ))
                 )
