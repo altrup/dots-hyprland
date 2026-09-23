@@ -75,6 +75,7 @@ hl.gesture({
     end
 })
 
+-- Mouse senses
 for i = 1, 2 do
     local mousenames = { "logitech-g305", "input-remapper-logitech-g305-forwarded" }
     for _, suffix in ipairs({ "", "-1", "-2", "-3", "-4" }) do
@@ -85,9 +86,8 @@ for i = 1, 2 do
     end
 end
 
-
-for i = 1, 2 do
-    local mousenames = { "micro-star-int'l-co.--ltd.-msi-versa-frieren-edition", "micro-star-int'l-co.--ltd.-msi-versa-wireless-frieren-edition" }
+for i = 1, 3 do
+    local mousenames = { "micro-star-int'l-co.--ltd.-msi-versa-frieren-edition", "micro-star-int'l-co.--ltd.-msi-versa-wireless-frieren-edition", "msi-versa-w-freiren-edition-mouse" }
     for _, suffix in ipairs({ "", "-1", "-2", "-3", "-4" }) do
         hl.device({
             name = mousenames[i] .. suffix,
