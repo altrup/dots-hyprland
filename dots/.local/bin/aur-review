@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+# aur-review: review AUR clones (rules + claude) before paru builds them.
+#   aur-review                 review pending AUR updates, then run paru -Sua
+#   aur-review <pkg ...>       review packages and their AUR deps, then run paru -S
+#   aur-review --dry-run       review pending updates only
+#   aur-review --audit [pkg|dir ...]   full review of installed foreign packages (default: all)
+#   aur-review --paru <paru args>      wrapper: review before any -S op, pass everything else through
+set -uo pipefail
+
+CLONES=$HOME/.cache/paru/clone
+MODEL=haiku
+MAXBYTES=51200
+TAG=aur-review/ok
+# ponytail: static allowlist, extend when a legit host gets flagged too often
+OKHOSTS='github.com|gitlab.com|codeberg.org|sourceforge.net|pypi.org|files.pythonhosted.org|crates.io|registry.npmjs.org|ftp.gnu.org|download.kde.org'
+
+PROMPT='You review an Arch Linux AUR package recipe for malicious or dangerous content. Input is either a full clone (PKGBUILD, .SRCINFO, *.install, patches) or a git diff of one.
+Flag: network access in build()/package()/prepare() beyond the source array, curl or wget piped to a shell, eval, base64 or hex encoded blobs, obfuscated shell, writes outside $pkgdir or $srcdir, anything touching $HOME or ~/.ssh or ~/.config, install hooks (.install) that run commands, systemd units or cron that run downloaded code, sudo, changed source URLs to unfamiliar hosts, patches that add code unrelated to the patch description.
+Version bumps with matching checksum changes are normal. Do not flag them.
+Running build or install code that lives inside the declared sources (setup.py, make install, python -m <module> from the repo, cmake, npm ci for a Node app) is normal even if unfamiliar. Flag code fetched or run from outside the declared sources.'
+SCHEMA='{"type":"object","required":["verdict","reason"],"properties":{"verdict":{"enum":["ok","suspicious"]},"reason":{"type":"string"}}}'
+
+ask() {  # ask <prompt> [claude args...]: prints OK, "SUSPICIOUS: reason", or "ERROR: ..." if claude is missing/fails
+  local p=$1 out; shift
+  out=$(printf '%s' "$p" | claude -p --model "$MODEL" --no-session-persistence --output-format json --json-schema "$SCHEMA" "$@" 2>&1) \
+    || { echo "ERROR: $(tail -n1 <<<"$out")"; return; }
+  jq -r '.[-1].structured_output | if .verdict == "ok" then "OK" elif .verdict == "suspicious" then "SUSPICIOUS: " + .reason else "ERROR: no verdict" end' <<<"$out" 2>/dev/null || echo "ERROR: unparsable output"
+}
+
+clone() {  # ensure clone exists and is fetched; echo dir, or return 1 if not on AUR
+  local pkg=$1 dir=$CLONES/$1
+  [ -d "$dir/.git" ] || git clone -q "https://aur.archlinux.org/$pkg.git" "$dir" 2>/dev/null
+  git -C "$dir" fetch -q origin master 2>/dev/null
+  if ! git -C "$dir" cat-file -e FETCH_HEAD:PKGBUILD 2>/dev/null; then
+    [ -d "$dir/.git" ] && [ -z "$(git -C "$dir" ls-files)" ] && rm -rf "$dir"
+    return 1
+  fi
+  echo "$dir"
+}
+
+aurdeps() {  # aurdeps <dir>: deps not satisfied by installed packages and not in the repos
+  local d
+  for d in $(git -C "$1" show FETCH_HEAD:.SRCINFO 2>/dev/null | sed -nE 's/^\t(make|check)?depends(_[a-z0-9_]+)? = ([^<>=: ]+).*/\3/p' | sort -u); do
+    pacman -T "$d" >/dev/null || pacman -Sp "$d" >/dev/null 2>&1 || echo "$d"
+  done
+}
+
+review() {  # review <name> <dir> <mode: full|diff>; prints "name  flags  verdict"; returns 1 if flagged
+  local name=$1 dir=$2 mode=$3 hard=() hints=() text srcinfo hosts host
+  srcinfo=$(git -C "$dir" show FETCH_HEAD:.SRCINFO 2>/dev/null || git -C "$dir" show FETCH_HEAD:PKGBUILD)
+  if [ "$mode" = diff ]; then
+    text=$(git -C "$dir" diff "$TAG" FETCH_HEAD)
+    [ -z "$text" ] && { printf '%-40s -  already reviewed, no changes since\n' "$name"; return 0; }
+    # change rules: deterministic hijack signals, flagged no matter what the model says
+    grep -q '^+.*sha[0-9]*sums' <<<"$text" && ! grep -q '^+pkgver=' <<<"$text" && hard+=(sums-without-pkgver)
+    grep -qE '^[-+]{3} [ab]/.*\.install$' <<<"$text" && hard+=(install-hook-changed)
+    grep -qE '^[-+]# ?Maintainer:' <<<"$text" && hard+=(maintainer-changed)
+    grep -qE '^\+.*\b(npm|pip|pip3|cargo|go|gem) (install|ci)\b|^\+.*\b(curl|wget)\b' <<<"$text" && hints+=(fetch-in-diff)
+  else
+    text=$(git -C "$dir" diff --numstat 4b825dc642cb6eb9a060e54bf8d69288fbee4904 FETCH_HEAD | awk '$1!="-" && $3!~/^(LICENSE|COPYING)/{print $3}' | while read -r f; do echo "=== $f"; git -C "$dir" show "FETCH_HEAD:$f"; done)  # empty tree..FETCH_HEAD: skips binaries
+    git -C "$dir" ls-tree -r --name-only FETCH_HEAD | grep -q '\.install$' && hints+=(install-hook)
+  fi
+  # static rules: properties of the package, passed to the model as context; only its verdict decides
+  grep -qE 'sums = SKIP' <<<"$srcinfo" && ! grep -qE 'source = .*git\+' <<<"$srcinfo" && hints+=(SKIP-checksum)
+  grep -qE 'source = .*#branch=' <<<"$srcinfo" && hints+=(git-branch-not-commit)
+  grep -qE 'validpgpkeys = ' <<<"$srcinfo" && hints+=(signed)
+  host=$(sed -nE 's|^\turl = [a-z+]+://([^/]+).*|\1|p' <<<"$srcinfo")
+  for h in $(sed -nE 's|^\tsource = ([^:]+::)?[a-z+]+://([^/]+).*|\2|p' <<<"$srcinfo" | grep -vE "^($OKHOSTS|${host:-none})$" | sort -u); do hints+=("host:$h"); done
+  local verdict
+  if [ ${#text} -gt $MAXBYTES ]; then
+    hard+=(too-large); verdict="SKIPPED: review by hand"
+  else
+    printf '%-40s reviewing %s with %s (%d KB)...\n' "$name" "$mode" "$MODEL" $((${#text}/1024))
+    verdict=$(ask "$PROMPT
+Package: $name. Upstream url: ${host:-unknown}. Static checks found: ${hints[*]:-none}. Change checks found: ${hard[*]:-none}. host:X means a source host that is neither the upstream url nor a well-known release host; judge whether it is plausible for this project.
+
+$text" --disallowedTools 'Bash,Edit,Write,Read,Glob,Grep,WebFetch,WebSearch,Agent')
+  fi
+  local flags=("${hard[@]}" "${hints[@]}")
+  printf '%-40s %-30s %s\n' "$name" "${flags[*]:--}" "$verdict"
+  [ ${#hard[@]} -eq 0 ] && [ "$verdict" = OK ] && { git -C "$dir" tag -f "$TAG" FETCH_HEAD >/dev/null; return 0; }
+  return 1   # hard flag, SUSPICIOUS, or ERROR (claude unavailable): user decides at the prompt
+}
+
+review_pkg() {  # review_pkg <name>: clone, then diff review if tagged else full; sets $dir ("" if not on AUR)
+  dir=$(clone "$1") || { dir=""; printf '%-40s -  not on AUR, skipped\n' "$1"; return 0; }
+  if git -C "$dir" rev-parse -q --verify "$TAG" >/dev/null; then review "$1" "$dir" diff; else review "$1" "$dir" full; fi
+}
+
+JOBS=${AUR_REVIEW_JOBS:-4}
+spawn() { "$@" & while [ "$(jobs -rp | wc -l)" -ge "$JOBS" ]; do wait -n || bad=1; done; }
+drain() { while [ -n "$(jobs -rp)" ]; do wait -n || bad=1; done; }
+
+mode=update paru=()
+case ${1:-} in --dry-run) mode=dry; shift;; --audit) mode=audit; shift;;
+  --paru) shift; paru=("$@"); [[ ${1:-} == -S* ]] || exec paru "$@"
+          set -- "${@:2}"; for a in "$@"; do shift; [[ $a == -* ]] || set -- "$@" "$a"; done;;  # keep package names only
+esac
+[ $mode = update ] && [ $# -gt 0 ] && mode=install
+bad=0 pkgs=() seen=()
+
+if [ $mode = audit ]; then
+  pkgs=("$@"); [ $# -eq 0 ] && mapfile -t pkgs < <(pacman -Qmq | grep -v -- '-debug$')
+  echo ":: Reviewing ${#pkgs[@]} foreign packages..."
+  for p in "${pkgs[@]}"; do
+    if [ -d "$p" ]; then git -C "$p" fetch -q . HEAD 2>/dev/null; dir=$p; p=$(basename "$p")
+    elif ! dir=$(clone "$p"); then printf '%-40s -  not on AUR, skipped\n' "$p"; continue; fi
+    spawn review "$p" "$dir" full
+  done; drain
+elif [ $mode = install ]; then
+  echo ":: Reviewing $# packages and their AUR dependencies..."
+  queue=("$@") seen=()
+  while [ ${#queue[@]} -gt 0 ]; do
+    p=${queue[0]}; queue=("${queue[@]:1}")
+    [[ " ${seen[*]} " == *" $p "* ]] && continue; seen+=("$p")
+    review_pkg "$p" || bad=1
+    [ -n "$dir" ] && mapfile -t -O ${#queue[@]} queue < <(aurdeps "$dir")
+  done
+else
+  echo ":: Looking for AUR upgrades..."
+  mapfile -t pkgs < <(paru -Qua 2>/dev/null | awk '{print $1}')
+  echo ":: Reviewing ${#pkgs[@]} AUR upgrades..."
+  for p in "${pkgs[@]}"; do spawn review_pkg "$p"; done; drain
+fi
+
+if [ $bad = 1 ]; then
+  echo; echo ":: Flagged packages above: inspect the clone in $CLONES/<pkg>"
+  [ $mode = dry ] || [ $mode = audit ] && exit 1
+  read -rp ":: Proceed anyway? [y/N] " a; [[ $a == [yY]* ]] || exit 1
+  # proceeding means you accepted this revision: tag it so the next update only reviews the diff
+  for p in "${pkgs[@]}" "${seen[@]}"; do [ -d "$CLONES/$p/.git" ] && git -C "$CLONES/$p" tag -f "$TAG" FETCH_HEAD >/dev/null; done
+fi
+[ ${#paru[@]} -gt 0 ] && exec paru "${paru[@]}"
+[ $mode = update ] && exec paru -Sua
+[ $mode = install ] && exec paru -S "$@"
+exit 0

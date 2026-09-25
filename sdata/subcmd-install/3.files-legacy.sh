@@ -18,6 +18,7 @@ case "${SKIP_MISCCONF}" in
     install_dir "dots/.local/share/konsole" "${XDG_DATA_HOME}"/konsole
     install_dir__ignore_existing "dots/.config/ktc-brightness" "${XDG_CONFIG_HOME}/ktc-brightness"
     install_file "dots/.local/bin/ddcutil" "${XDG_BIN_HOME}/ddcutil"
+    install_file "dots/.local/bin/aur-review" "${XDG_BIN_HOME}/aur-review"
     ;;
 esac
 
