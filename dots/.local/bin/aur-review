@@ -9,7 +9,7 @@ set -uo pipefail
 
 CLONES=$HOME/.cache/paru/clone
 MODEL=haiku
-MAXBYTES=51200
+MAXBYTES=204800
 TAG=aur-review/ok
 # ponytail: static allowlist, extend when a legit host gets flagged too often
 OKHOSTS='github.com|gitlab.com|codeberg.org|sourceforge.net|pypi.org|files.pythonhosted.org|crates.io|registry.npmjs.org|ftp.gnu.org|download.kde.org'
@@ -57,7 +57,7 @@ review() {  # review <name> <dir> <mode: full|diff>; prints "name  flags  verdic
     grep -qE '^[-+]# ?Maintainer:' <<<"$text" && hard+=(maintainer-changed)
     grep -qE '^\+.*\b(npm|pip|pip3|cargo|go|gem) (install|ci)\b|^\+.*\b(curl|wget)\b' <<<"$text" && hints+=(fetch-in-diff)
   else
-    text=$(git -C "$dir" diff --numstat 4b825dc642cb6eb9a060e54bf8d69288fbee4904 FETCH_HEAD | awk '$1!="-" && $3!~/^(LICENSE|COPYING)/{print $3}' | while read -r f; do echo "=== $f"; git -C "$dir" show "FETCH_HEAD:$f"; done)  # empty tree..FETCH_HEAD: skips binaries
+    text=$(git -C "$dir" diff --numstat 4b825dc642cb6eb9a060e54bf8d69288fbee4904 FETCH_HEAD | awk '$1!="-"{print $3}' | while read -r f; do echo "=== $f"; git -C "$dir" show "FETCH_HEAD:$f"; done)  # empty tree..FETCH_HEAD: skips binaries
     git -C "$dir" ls-tree -r --name-only FETCH_HEAD | grep -q '\.install$' && hints+=(install-hook)
   fi
   # static rules: properties of the package, passed to the model as context; only its verdict decides
@@ -91,9 +91,13 @@ JOBS=${AUR_REVIEW_JOBS:-4}
 spawn() { "$@" & while [ "$(jobs -rp | wc -l)" -ge "$JOBS" ]; do wait -n || bad=1; done; }
 drain() { while [ -n "$(jobs -rp)" ]; do wait -n || bad=1; done; }
 
-mode=update paru=()
+mode=update paru=() wrapped=0
 case ${1:-} in --dry-run) mode=dry; shift;; --audit) mode=audit; shift;;
-  --paru) shift; paru=("$@"); [[ ${1:-} == -S* ]] || exec paru "$@"
+  --paru) shift; paru=("$@") wrapped=1 installs=0
+          # review only what installs or upgrades: bare paru, or -S without search/info/print/clean/groups/list
+          { [ $# -eq 0 ] || [[ $1 =~ ^-S[^sipcgl]*$ ]]; } && installs=1
+          for a in "$@"; do case $a in --search|--info|--print|--clean|--groups|--list) installs=0;; esac; done
+          [ $installs = 1 ] || exec paru "$@"
           set -- "${@:2}"; for a in "$@"; do shift; [[ $a == -* ]] || set -- "$@" "$a"; done;;  # keep package names only
 esac
 [ $mode = update ] && [ $# -gt 0 ] && mode=install
@@ -130,7 +134,7 @@ if [ $bad = 1 ]; then
   # proceeding means you accepted this revision: tag it so the next update only reviews the diff
   for p in "${pkgs[@]}" "${seen[@]}"; do [ -d "$CLONES/$p/.git" ] && git -C "$CLONES/$p" tag -f "$TAG" FETCH_HEAD >/dev/null; done
 fi
-[ ${#paru[@]} -gt 0 ] && exec paru "${paru[@]}"
+[ $wrapped = 1 ] && exec paru "${paru[@]}"
 [ $mode = update ] && exec paru -Sua
 [ $mode = install ] && exec paru -S "$@"
 exit 0
