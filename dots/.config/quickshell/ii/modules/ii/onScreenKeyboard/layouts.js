@@ -103,12 +103,12 @@ const byName = {
             ],
             [
                 { keytype: "modkey", label: "Ctrl", shape: "control", keycode: 29 },
-                // { label: "Super", shape: "normal", keycode: 125 }, // dangerous
+                { keytype: "modkey", label: "Super", shape: "normal", keycode: 125 },
                 { keytype: "modkey", label: "Alt", shape: "normal", keycode: 56 },
                 { keytype: "normal", label: "Space", shape: "space", keycode: 57 },
                 { keytype: "modkey", label: "Alt", shape: "normal", keycode: 100 },
                 // { label: "Super", shape: "normal", keycode: 126 }, // dangerous
-                { keytype: "normal", label: "Menu", shape: "normal", keycode: 139 },
+                // { keytype: "normal", label: "Menu", shape: "normal", keycode: 139 },
                 { keytype: "modkey", label: "Ctrl", shape: "control", keycode: 97 }
             ]
         ]

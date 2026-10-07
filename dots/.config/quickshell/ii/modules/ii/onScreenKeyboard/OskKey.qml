@@ -42,7 +42,7 @@ RippleButton {
         "shift": 1,
         "control": 1
     })
-    toggled: isShift ? Ydotool.shiftMode : false
+    toggled: isShift ? Ydotool.shiftMode : Ydotool.armedMods.includes(keycode)
 
     enabled: shape != "empty"
     colBackground: shape == "empty" ? ColorUtils.transparentize(Appearance.colors.colLayer1) : Appearance.colors.colLayer1
@@ -78,40 +78,31 @@ RippleButton {
     }
 
     downAction: () => {
-        Ydotool.press(root.keycode);
-        if (isShift && Ydotool.shiftMode == 0) Ydotool.shiftMode = 1;
+        if (root.type == "normal") {
+            Ydotool.press(root.keycode);
+        } else if (isShift && Ydotool.shiftMode == 0) {
+            Ydotool.shiftMode = 1;
+        }
     }
     releaseAction: () => {
         if (root.type == "normal") {
             Ydotool.release(root.keycode);
-            if (Ydotool.shiftMode == 1) {
-                Ydotool.releaseShiftKeys()
-            }
+            if (Ydotool.shiftMode == 1) Ydotool.shiftMode = 0;
         } else if (isShift) {
             if (Ydotool.shiftMode == 1) {
                 if (!capsLockTimer.hasStarted) {
                     capsLockTimer.startWaiting();
+                } else if (capsLockTimer.canCaps) {
+                    Ydotool.shiftMode = 2; // Caps lock mode
                 } else {
-                    if (capsLockTimer.canCaps) {
-                        Ydotool.shiftMode = 2; // Caps lock mode
-                    } else {
-                        Ydotool.releaseShiftKeys()
-                    }
+                    Ydotool.shiftMode = 0;
                 }
             } else if (Ydotool.shiftMode == 2) {
-                Ydotool.releaseShiftKeys();
+                Ydotool.shiftMode = 0;
             }
         } else if (root.type == "modkey") {
-            root.toggled = !root.toggled;
-            if (!root.toggled) {
-                if (isShift) {
-                    Ydotool.releaseShiftKeys();
-                } else { 
-                    Ydotool.release(root.keycode);
-                }
-            }
+            Ydotool.toggleMod(root.keycode);
         }
-
     }
 
     function calculateFontSize() {
